@@ -1,0 +1,18 @@
+---
+title: "McCormick 2015"
+author: "Will Townes"
+date: "9/14/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Exploratory Data Analysis of McCormick 2015
+
+This is genetic perturbation and replicative lifespan data for almost all genes in yeast.
+
+```{r}
+d<-read.csv("data/mccormick2015.csv")
+```
