@@ -1,0 +1,14 @@
+---
+title: "Kemmeren 2014"
+author: "Will Townes"
+date: "9/14/2017"
+output: html_document
+---
+
+# Exploratory Data Analysis of Kemmeren 2014
+
+Gene expression (microarray) for about 1500 single gene deletion yeast mutants. The data were obtained from http://deleteome.holstegelab.nl. Click downloads and select all mutants, not excluding wild type variable genes.
+
+```
+wget -p data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
+```
