@@ -10,5 +10,5 @@ output: html_document
 Gene expression (microarray) for about 1500 single gene deletion yeast mutants. The data were obtained from http://deleteome.holstegelab.nl. Click downloads and select all mutants, not excluding wild type variable genes.
 
 ```
-wget -p data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
+wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
 ```
