@@ -12,3 +12,17 @@ Gene expression (microarray) for about 1500 single gene deletion yeast mutants. 
 ```
 wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
 ```
+
+```{r}
+source("DeleteomeCleaning.R")
+library(Rtsne)
+library(ggplot2)
+res<-prcomp(t(deleteomeData))
+pd<-as.data.frame(res$x)
+#ggplot(pd,aes(x="PC1",y="PC2"))+geom_point()
+plot(pd[,1],pd[,2])
+
+res2<-Rtsne(t(deleteomeData))
+pd2<-res2$Y
+plot(pd2[,1],pd2[,2])
+```
