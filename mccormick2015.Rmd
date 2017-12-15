@@ -15,4 +15,17 @@ This is genetic perturbation and replicative lifespan data for almost all genes 
 
 ```{r}
 d<-read.csv("data/mccormick2015.csv")
+length(unique(d$set_strain))
+mcp<-unique(d$set_strain)
+"VMA2" %in% gdata$geneSymbol
+table(d$ref_genotype)
+mcp<-unique(unlist(strsplit(as.character(d$set_genotype)," ",fixed=TRUE)))
+mcp<-toupper(mcp) #list of unique gene symbols perturbed
+#compare to deleteome stuff
+source("load_deleteome.R")
+table(mcp %in% perts)
+table(mcp %in% gdata$geneSymbol)
+head(mcp[!(mcp %in% gdata$geneSymbol)])
+table(perts %in% mcp)
+table(perts %in% mcp,perts %in% gdata$geneSymbol)
 ```

@@ -1,5 +1,6 @@
 #Read in data
-d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt")
+#d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt")
+d <- read.delim("data/deleteome_all_mutants_controls.txt")
 gdata<-d[2:nrow(d),1:3]
 d_a<-d[2:nrow(d),seq(from=4,to=ncol(d),by=3)]
 d_m<-d[2:nrow(d),seq(from=5,to=ncol(d),by=3)]
