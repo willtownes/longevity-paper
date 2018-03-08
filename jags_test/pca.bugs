@@ -3,16 +3,22 @@ model {
   # Likelihood:
   for( i in 1 : n ) {
     for( j in 1 : d ) {
-      y[i,j] ~ dnorm(mu[j]+u[i]%*%v[j], tau_y)
+      y[i,j] ~ dnorm(mu[j]+inprod(u[i,], v[j,]), tau_y)
     }
   }
   # Prior:
   for(i in 1:n){
-    u[i] ~ dmnorm(0, alpha*Eye_L)
+    #u[i,1:L]~dmnorm(zero_vec,alpha*Eye_L)
+    for(l in 1:L){
+      u[i,l] ~ dnorm(0, alpha)
+    }
   }
   for(j in 1:d){
-    v[j] ~ dmnorm(0, alpha*Eye_L)
     mu[j] ~ dnorm(0, .0001*alpha) #weaker prior for intercept
+    #v[j,1:L] ~ dmnorm(zero_vec, alpha*Eye_L)
+    for(l in 1:L){
+      v[j,l] ~ dnorm(0, alpha)
+    }
   }
   tau_y ~ dgamma(.001,.001)
 }
