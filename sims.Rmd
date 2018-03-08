@@ -1,0 +1,22 @@
+---
+title: "Simulations"
+author: "Will Townes"
+date: "3/8/2018"
+output: html_document
+---
+
+```{r}
+library(MASS)
+```
+
+```{r}
+N<-100 #number of perturbations
+G<-1000 #number of genes
+K<-50 #number of gene clusters (pathways), avg of G/K genes per pathway
+L<-20 #latent dimensional space
+b<-c(rep(0,15),c(-5,-2,-1,2,5)) #coefficients for survival outcome
+x<-1:N #index or which gene is perturbed in each experiment
+
+```
+
+hand code the phi_k coefficient vector prototypes. 2 of 20 are survival related (have large values in last 5 dimensions)
