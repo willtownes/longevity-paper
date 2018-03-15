@@ -10,13 +10,84 @@ library(MASS)
 ```
 
 ```{r}
-N<-100 #number of perturbations
 G<-1000 #number of genes
+#N<-2*G #number of perturbations
 K<-50 #number of gene clusters (pathways), avg of G/K genes per pathway
 L<-20 #latent dimensional space
-b<-c(rep(0,15),c(-5,-2,-1,2,5)) #coefficients for survival outcome
-x<-1:N #index or which gene is perturbed in each experiment
-
+b<-c(-5,-5,5,5,5,rep(0,15)) #coefficients for survival outcome
+x<-rep(1:G,2) #index of which gene is perturbed in each experiment
+#complete data- we perturb every gene twice
+#first perturbation is to get survival
+#second perturbation is to get gene expression
+is_survival<-rep(c(TRUE,FALSE),each=G)
+N<-length(x)
+sigma_phi<-4
+sigma_a<-1
+sigma_v<-2
+sigma_psi<-sigma_phi
+sigma_u<-1
+sigma_w<-1
+mu_w<-rnorm(G,sd=.1)
+mu_y<-40
+sigma_y<-2
+bulk_ncells<-1e4
+psi<-matrix(rnorm(K*L,sd=sigma_psi),nrow=L,ncol=K)
+#psi=loadings of latent dimensions onto expression for a gene cluster
+phi<-matrix(rnorm(K*L,sd=sigma_phi),nrow=L,ncol=K)
+#cols=gene clusters, rows=latent dimensions
+#first five cols=clusters related to survival
+#first five rows= dimensions related to survival
+phi[1:5,]<-phi[1:5,]/2 #less variability in first five dims
+phi[1:5,1:5]<-phi[1:5,1:5]+20*diag(5)
+image(phi)
+cg<-sort(rep_len(1:K,G)) #cluster membership for each gene
+a<-matrix(rnorm(G*L,sd=sigma_a),nrow=L,ncol=G)
+v<-matrix(rnorm(G*L,sd=sigma_v),nrow=L,ncol=G)
+for(g in 1:G){
+  a[,g]<-a[,g]+phi[,cg[g]]
+  v[,g]<-v[,g]+psi[,cg[g]]
+}
+u_surv<-matrix(rnorm(G*L,sd=sigma_u),nrow=L,ncol=G)
+u_gxp<-matrix(rnorm(G*L,sd=sigma_u/sqrt(bulk_ncells)),nrow=L,ncol=G)
+u<-cbind(u_surv,u_gxp)
+for(n in 1:N){
+  u[,n]<-u[,n]+a[,x[n]]
+}
+u_surv<-u[,1:G]
+u_gxp<-u[,G+1:G]
+w<-matrix(rnorm(G*ncol(u_gxp),sd=sigma_w),nrow=G)
+w<-w+mu_w+crossprod(v,u_gxp)
+#rows=measured genes, cols=perturbed genes
+y<-crossprod(u_surv,b)+mu_y+rnorm(ncol(u_surv),sd=sigma_y)
 ```
 
-hand code the phi_k coefficient vector prototypes. 2 of 20 are survival related (have large values in last 5 dimensions)
+hand code the phi_k coefficient vector prototypes. 5 of 50 are survival related (have large values in last 5 dimensions)
+
+Confirm that first five gene clusters have significant effect on survival
+
+```{r}
+#get gene cluster info for each perturbation
+pert_clust<-cg[x[is_survival]]
+boxplot(y~factor(pert_clust),xlab="gene cluster/pathway",ylab="simulated lifespan")
+#first two clusters: negative effect on survival
+#clusters 3,4,5: positive efffect on survival
+```
+
+Confirm whether we can recover clusters by gene expression data
+
+```{r}
+#viz clustering by perturbation pattern
+factors<-as.data.frame(prcomp(t(w))$x[,1:2])
+factors$cl_true<-cg
+plot(factors[,1],factors[,2],col=factors$cl_true)
+#viz clustering by expression pattern across perts
+factors<-as.data.frame(prcomp(w)$x[,1:2])
+factors$cl_true<-cg
+plot(factors[,1],factors[,2],col=factors$cl_true)
+#kmeans on genes across perturbation
+cl<-kmeans(w,50)$cluster
+cl_compare<-table(cl,cg)
+heatmap(cl_compare)
+mclust::adjustedRandIndex(cl,cg)
+#the clusterings are roughly concordant
+```
