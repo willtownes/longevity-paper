@@ -91,3 +91,36 @@ heatmap(cl_compare)
 mclust::adjustedRandIndex(cl,cg)
 #the clusterings are roughly concordant
 ```
+
+Create subsets of data for training and test
+
+```{r}
+perts_surv<-sample.int(G,size=800)
+perts_expr<-sample.int(G,size=400)
+y_train<-y[perts_surv]
+w_train<-w[,perts_expr]
+xx<-x[!is_survival]
+xx_train<-xx[perts_expr]
+xs<-x[is_survival]
+xs_train<-xs[perts_surv]
+
+#test data
+y_test<-y[!perts_surv]
+w_test<-w[,!perts_expr]
+xs_test<-xs[!perts_surv]
+xx_test<-xx[!perts_expr]
+```
+
+Run integrated JAGS model
+
+```{r}
+library(rjags)
+#data for JAGS
+jdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=20, K=50, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K))
+jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=TRUE)
+update(jmod, 1000, progress.bar="none")
+system.time(samps0<-coda.samples(jmod, variable.names=c("mu","u","v","tau_y"), n.iter=5000, progress.bar="none")) 
+#list of length n.chains
+#convert to data frame
+samps<-do.call("rbind",samps0)
+```

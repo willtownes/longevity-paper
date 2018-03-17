@@ -33,7 +33,10 @@ model{
   # Likelihoods
   for(n in 1:Ns){
     y[n] ~ dnorm(mu_y+inprod(b,Us[n,]), tau_y*ncell_s[n])
-    Us[n,]<- A[xs[n],]
+    Us[n,1:L]<- A[xs[n],]
+  }
+  for(n in 1:Nx){
+    Ux[n,1:L]<- A[xx[n],]
   }
   for(g in 1:G){
     for(n in 1:Nx) {
