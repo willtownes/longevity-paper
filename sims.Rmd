@@ -124,3 +124,12 @@ system.time(samps0<-coda.samples(jmod, variable.names=c("mu","u","v","tau_y"), n
 #convert to data frame
 samps<-do.call("rbind",samps0)
 ```
+
+Try Stan model
+
+```{r}
+library(rstan)
+rstan_options(auto_write=TRUE)
+options(mc.cores=parallel::detectCores()-1)
+stmod<-stan_model("integrated_model.stan")
+```

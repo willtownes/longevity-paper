@@ -1,10 +1,4 @@
 //Full model for integrating gene expression with survival outcome
-#ncell_s integer vector of length Ns, number of cells for each survival pert
-#ncell_x integer, number of cells for gene expression (assumed const acros perts)
-#W a matrix with G rows, Nx cols of gene expression measurements
-#columns of W= perturbations, rows of W= expression of genes
-#y a vector of length Ns of average survival outcomes for each perturbation
-#dir_wts a vector of length K of dirichlet prior weights for gene clusters
 
 data {
   int<lower=1> Nx; //number of gene expression samples
@@ -49,7 +43,7 @@ transformed parameters {
   }
 }
 model {
-  real log_theta[K] = log(theta); //cache
+  vector[K] log_theta = log(theta); //cache
   // finite mixture prior
   theta~dirichlet(dir_wts);
   sigma_phi ~ gamma(2,1);
@@ -59,8 +53,10 @@ model {
     psi[k] ~ normal(0,sigma_psi);
   }
   for (g in 1:G) {
-    real lps_a[K] = log_theta;
-    real lps_v[K] = log_theta;
+    //real lps_a[K] = log_theta;
+    //real lps_v[K] = log_theta;
+    vector[K] lps_a = log_theta;
+    vector[K] lps_v = log_theta;
     for (k in 1:K) {
       lps_a[k] += normal_lpdf(a[g] | phi[k], sigma_a);
       lps_v[k] += normal_lpdf(v[g] | psi[k], sigma_v);
@@ -79,7 +75,7 @@ model {
   sigma_w~cauchy(0,1);
   for(n in 1:Nx){
     for(g in 1:G){
-      w[g,n]~ normal(mu_w[g] + dot_product(ux[n],v[g]), sigma_w);
+      W[g,n]~ normal(mu_w[g] + dot_product(ux[n],v[g]), sigma_w);
     }
   }
 }
