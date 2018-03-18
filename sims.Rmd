@@ -95,8 +95,8 @@ mclust::adjustedRandIndex(cl,cg)
 Create subsets of data for training and test
 
 ```{r}
-perts_surv<-sample.int(G,size=800)
-perts_expr<-sample.int(G,size=400)
+perts_surv<-sample.int(G,size=600)
+perts_expr<-sample.int(G,size=300)
 y_train<-y[perts_surv]
 w_train<-w[,perts_expr]
 xx<-x[!is_survival]
@@ -117,8 +117,8 @@ Run integrated JAGS model
 library(rjags)
 #data for JAGS
 jdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=20, K=50, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K))
-jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=TRUE)
-update(jmod, 1000, progress.bar="none")
+system.time(jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=FALSE)) #this took almost 10 hours!
+update(jmod, 1000)#, progress.bar="none")
 system.time(samps0<-coda.samples(jmod, variable.names=c("mu","u","v","tau_y"), n.iter=5000, progress.bar="none")) 
 #list of length n.chains
 #convert to data frame
