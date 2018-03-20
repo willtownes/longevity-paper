@@ -10,7 +10,7 @@ data {
   int<lower=1,upper=G> xx[Nx]; //perturbation indicator for gene expression
   int<lower=1,upper=G> xs[Ns]; //pert indicator for survival
   int<lower=1> ncell_s[Ns];
-  int<lower=1> ncell_x[Nx];
+  int<lower=1> ncell_x;
   matrix[G,Nx] W;
   vector[Ns] y;
   vector[K] dir_wts;
@@ -33,10 +33,10 @@ parameters {
   real<lower=0> sigma_psi;
 }
 transformed parameters {
-  vector[L] us[Ns];
+  vector[Ls] us[Ns];
   vector[L] ux[Nx];
   for(n in 1:Ns){
-    us[n] = a[xs[n]];
+    us[n] = a[xs[n],1:Ls];
   }
   for(n in 1:Nx){
     ux[n] = a[xx[n]];
@@ -68,14 +68,14 @@ model {
   b~cauchy(0,1);
   sigma_y~cauchy(0,1);
   for(n in 1:Ns){
-    y[n] ~ normal(mu_y+dot_product(us[n],b),sigma_y);
+    y[n] ~ normal(mu_y+dot_product(us[n],b),sigma_y/ncell_s[n]);
   }
   //gene expression outcome
   mu_w~cauchy(0,5);
   sigma_w~cauchy(0,1);
   for(n in 1:Nx){
     for(g in 1:G){
-      W[g,n]~ normal(mu_w[g] + dot_product(ux[n],v[g]), sigma_w);
+      W[g,n]~ normal(mu_w[g] + dot_product(ux[n],v[g]), sigma_w/ncell_x);
     }
   }
 }

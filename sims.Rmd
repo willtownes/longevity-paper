@@ -6,15 +6,19 @@ output: html_document
 ---
 
 ```{r}
-library(MASS)
+#library(MASS)
+library(rjags)
+library(rstan)
+rstan_options(auto_write=TRUE)
+options(mc.cores=parallel::detectCores()-1)
 ```
 
 ```{r}
-G<-1000 #number of genes
+G<-200 #number of genes
 #N<-2*G #number of perturbations
-K<-50 #number of gene clusters (pathways), avg of G/K genes per pathway
-L<-20 #latent dimensional space
-b<-c(-5,-5,5,5,5,rep(0,15)) #coefficients for survival outcome
+K<-15 #number of gene clusters (pathways), avg of G/K genes per pathway
+L<-10 #latent dimensional space
+b<-c(-5,-5,5,5,5,rep(0,L-5)) #coefficients for survival outcome
 x<-rep(1:G,2) #index of which gene is perturbed in each experiment
 #complete data- we perturb every gene twice
 #first perturbation is to get survival
@@ -61,7 +65,7 @@ w<-w+mu_w+crossprod(v,u_gxp)
 y<-crossprod(u_surv,b)+mu_y+rnorm(ncol(u_surv),sd=sigma_y)
 ```
 
-hand code the phi_k coefficient vector prototypes. 5 of 50 are survival related (have large values in last 5 dimensions)
+hand code the phi_k coefficient vector prototypes. 5 of 25 are survival related (have large values in last 5 dimensions)
 
 Confirm that first five gene clusters have significant effect on survival
 
@@ -95,8 +99,8 @@ mclust::adjustedRandIndex(cl,cg)
 Create subsets of data for training and test
 
 ```{r}
-perts_surv<-sample.int(G,size=600)
-perts_expr<-sample.int(G,size=300)
+perts_surv<-sample.int(G,size=100)
+perts_expr<-sample.int(G,size=80)
 y_train<-y[perts_surv]
 w_train<-w[,perts_expr]
 xx<-x[!is_survival]
@@ -114,7 +118,6 @@ xx_test<-xx[!perts_expr]
 Run integrated JAGS model
 
 ```{r}
-library(rjags)
 #data for JAGS
 jdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=20, K=50, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K))
 system.time(jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=FALSE)) #this took almost 10 hours!
@@ -128,8 +131,7 @@ samps<-do.call("rbind",samps0)
 Try Stan model
 
 ```{r}
-library(rstan)
-rstan_options(auto_write=TRUE)
-options(mc.cores=parallel::detectCores()-1)
 stmod<-stan_model("integrated_model.stan")
+sdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=10, K=15, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K), Ls=5)
+res<-sampling(stmod, sdat, chains=3)
 ```
