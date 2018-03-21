@@ -14,25 +14,26 @@ options(mc.cores=parallel::detectCores()-1)
 ```
 
 ```{r}
-G<-200 #number of genes
+G<-50 #number of genes
 #N<-2*G #number of perturbations
-K<-15 #number of gene clusters (pathways), avg of G/K genes per pathway
-L<-10 #latent dimensional space
-b<-c(-5,-5,5,5,5,rep(0,L-5)) #coefficients for survival outcome
+K<-5 #number of gene clusters (pathways), avg of G/K genes per pathway
+L<-4 #latent dimensional space
+Ls<-2 #survival latent dimensions
+b<-c(-5,5,rep(0,L-Ls)) #coefficients for survival outcome
 x<-rep(1:G,2) #index of which gene is perturbed in each experiment
 #complete data- we perturb every gene twice
 #first perturbation is to get survival
 #second perturbation is to get gene expression
 is_survival<-rep(c(TRUE,FALSE),each=G)
 N<-length(x)
-sigma_phi<-4
-sigma_a<-1
-sigma_v<-2
+sigma_phi<-1.5
+sigma_a<-.2
+sigma_v<-1
 sigma_psi<-sigma_phi
-sigma_u<-1
+sigma_u<-0.1
 sigma_w<-1
 mu_w<-rnorm(G,sd=.1)
-mu_y<-40
+mu_y<-100
 sigma_y<-2
 bulk_ncells<-1e4
 psi<-matrix(rnorm(K*L,sd=sigma_psi),nrow=L,ncol=K)
@@ -41,8 +42,8 @@ phi<-matrix(rnorm(K*L,sd=sigma_phi),nrow=L,ncol=K)
 #cols=gene clusters, rows=latent dimensions
 #first five cols=clusters related to survival
 #first five rows= dimensions related to survival
-phi[1:5,]<-phi[1:5,]/2 #less variability in first five dims
-phi[1:5,1:5]<-phi[1:5,1:5]+20*diag(5)
+phi[1:Ls,]<-phi[1:Ls,]/2 #less variability in first five dims
+phi[1:Ls,1:Ls]<-phi[1:Ls,1:Ls]+5*diag(Ls)
 image(phi)
 cg<-sort(rep_len(1:K,G)) #cluster membership for each gene
 a<-matrix(rnorm(G*L,sd=sigma_a),nrow=L,ncol=G)
@@ -65,9 +66,9 @@ w<-w+mu_w+crossprod(v,u_gxp)
 y<-crossprod(u_surv,b)+mu_y+rnorm(ncol(u_surv),sd=sigma_y)
 ```
 
-hand code the phi_k coefficient vector prototypes. 5 of 25 are survival related (have large values in last 5 dimensions)
+hand code the phi_k coefficient vector prototypes. 2 of 4 are survival related (have large values in first 2 dimensions)
 
-Confirm that first five gene clusters have significant effect on survival
+Confirm that first 2 gene clusters have significant effect on survival
 
 ```{r}
 #get gene cluster info for each perturbation
@@ -89,7 +90,7 @@ factors<-as.data.frame(prcomp(w)$x[,1:2])
 factors$cl_true<-cg
 plot(factors[,1],factors[,2],col=factors$cl_true)
 #kmeans on genes across perturbation
-cl<-kmeans(w,50)$cluster
+cl<-kmeans(w,K)$cluster
 cl_compare<-table(cl,cg)
 heatmap(cl_compare)
 mclust::adjustedRandIndex(cl,cg)
@@ -99,8 +100,10 @@ mclust::adjustedRandIndex(cl,cg)
 Create subsets of data for training and test
 
 ```{r}
-perts_surv<-sample.int(G,size=100)
-perts_expr<-sample.int(G,size=80)
+perts_surv<-sample.int(G,size=floor(G/2))
+survtest<-setdiff(1:G,perts_surv)
+perts_expr<-sample.int(G,size=floor(G/3))
+exprtest<-setdiff(1:G,perts_expr)
 y_train<-y[perts_surv]
 w_train<-w[,perts_expr]
 xx<-x[!is_survival]
@@ -109,29 +112,49 @@ xs<-x[is_survival]
 xs_train<-xs[perts_surv]
 
 #test data
-y_test<-y[!perts_surv]
-w_test<-w[,!perts_expr]
-xs_test<-xs[!perts_surv]
-xx_test<-xx[!perts_expr]
-```
-
-Run integrated JAGS model
-
-```{r}
-#data for JAGS
-jdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=20, K=50, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K))
-system.time(jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=FALSE)) #this took almost 10 hours!
-update(jmod, 1000)#, progress.bar="none")
-system.time(samps0<-coda.samples(jmod, variable.names=c("mu","u","v","tau_y"), n.iter=5000, progress.bar="none")) 
-#list of length n.chains
-#convert to data frame
-samps<-do.call("rbind",samps0)
+y_test<-y[survtest]
+w_test<-w[,exprtest]
+xs_test<-xs[survtest]
+xx_test<-xx[exprtest]
 ```
 
 Try Stan model
 
 ```{r}
 stmod<-stan_model("integrated_model.stan")
-sdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=10, K=15, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K), Ls=5)
+Xs_train<-model.matrix(~factor(xs_train,levels=1:G)-1)
+Xx_train<-model.matrix(~factor(xx_train,levels=1:G)-1)
+sdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=4, K=5, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K), Ls=2)
 res<-sampling(stmod, sdat, chains=3)
+```
+
+Run integrated JAGS model
+
+```{r}
+#data for JAGS
+jdat<-list(xx=xx_train, xs=xs_train, Nx=length(xx_train), Ns=length(xs_train), ncell_s=rep_len(1,length(xs_train)), ncell_x=bulk_ncells, L=4, K=5, G=nrow(w_train), W=w_train, y=y_train, dir_wts=rep(1,K))
+system.time(jmod<-jags.model("integrated_model.bugs", data=jdat, n.chains=3, quiet=FALSE)) #this took almost 10 hours!
+update(jmod, 10000)#, progress.bar="none")
+jpars<-c("A","V","b","mu_w","tau_w","Psi","Phi","tau_v","tau_a","tau_y","theta","delta","mu_y")
+system.time(samps0<-coda.samples(jmod, variable.names=jpars, n.iter=50000)) 
+#list of length n.chains
+#convert to data frame
+samps<-do.call("rbind",samps0)
+#colMeans(samps[,grepl("b",colnames(samps))])
+hist(samps[,"mu_y"])
+test_rmse<-function(s,samps,xs_test,y_test,jdat){
+  #s indexes a sample from Gibbs
+  A<-samps[s,grepl("A",colnames(samps))]
+  A<-matrix(A,nrow=jdat$G)
+  U<-A[xs_test,]
+  b<-samps[s,grepl("b",colnames(samps))]
+  mu_y<-samps[s,grepl("mu_y",colnames(samps))]
+  ypred<-U%*%b+mu_y
+  sqrt(mean((y_test-ypred)^2))
+}
+err<-lapply(samps0,function(samps){sapply(1:nrow(samps),test_rmse,samps,xs_test,y_test,jdat)})
+err<-data.frame(err)
+matplot(err,type="l")
+#naive error
+sqrt(mean((y_test-mean(y_train))^2))
 ```
