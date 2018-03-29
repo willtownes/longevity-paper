@@ -3,3 +3,6 @@
 .RData
 .Ruserdata
 .DS_Store
+*.rds
+data/YeastNet.v3.txt
+data/deleteome_responsive_mutants_ex_wt_var_controls.txt
