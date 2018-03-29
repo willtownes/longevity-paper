@@ -1,0 +1,226 @@
+---
+title: "Loading Deleteome and McCormick 2015 Survival Data"
+author: "Will Townes"
+date: "9/14/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(SummarizedExperiment)
+library(survival)
+library(survminer)
+```
+
+# Load and clean raw data
+
+Useful functions, mostly for McCormick data
+
+```{r}
+merge_lifespans<-function(x){
+  #x is a vector like c("4,3,5","2,3,1","9")
+  #returns a single string concatenating all values together
+  paste0(x,collapse=",")
+}
+str2vec<-function(x){as.numeric(unlist(strsplit(x,",",fixed=TRUE)))}
+str2mean<-function(y){
+  vapply(y,function(t){mean(str2vec(t))},FUN.VALUE=1.0)
+}
+str2count<-function(y){
+  vapply(y,function(t){length(str2vec(t))},FUN.VALUE=1)
+}
+perts2uniquegenes<-function(x){
+  #x a list of space-separated gene symbols
+  #each item is a perturbation, can have many genes per perturbation
+  #returns a vector with how many genes were in each perturbation
+  sg<-strsplit(as.character(x)," ",fixed=TRUE)
+  mcp<-unique(unlist(sg))
+  toupper(mcp) #list of unique gene symbols perturbed
+}
+ngenes_per_perturbation<-function(x){
+  sg<-strsplit(as.character(x)," ",fixed=TRUE)
+  sapply(sg,length)
+}
+```
+
+## McCormick 2015 Replicative Lifespan
+
+This is genetic perturbation and replicative lifespan data for almost all genes in yeast. The original data was provided by Kareem Carr who had emailed the author and received an excel file in response. Also, the authors provided this information:
+
+```
+---------- Forwarded message ----------
+From: Kareem Carr <kareemcarr@fas.harvard.edu>
+Date: Sat, Jun 17, 2017 at 5:26 PM
+Subject: Fwd: A Comprehensive Analysis of Replicative Lifespan ... [Data Request]
+To: Jeff Miller <jwmiller@hsph.harvard.edu>, "Doshi-Velez, Finale" <finale@seas.harvard.edu>
+
+Full lifespan data set from A Comprehensive Analysis of Replicative Lifespan in 4,698 Single-Gene Deletion Strains Uncovers Conserved Mechanisms of Aging by McCormick et al.
+
+---------- Forwarded message ----------
+From: Mark McCormick <mark.mccormick.01@gmail.com>
+Date: Fri, Jun 16, 2017 at 6:29 PM
+Subject: Re: A Comprehensive Analysis of Replicative Lifespan ... [Data Request]
+To: Kareem Carr <kareemcarr@fas.harvard.edu>
+
+Hi Kareem, here is a summary of our RLS data, for all BY background deletions (singly and in combination(s)), on YPD plates at 30C, as of the time we compiled the results for the screen.
+
+This is by file (experiment), so if there are multiple rows for the same genotype in this file, these rows are all mutually exclusive.  This means that to get the complete data for any genotype you would combine the raw RLS data listed under "set_lifespans" for all rows sharing that genotype, and to get the corresponding control data you would combine all "ref_lifespans" cells listed under that genotype.
+
+This is missing some corrupted data from a cryptolocker trojan that got onto someone's laptop, when a previous tech in the lab hadn't backed up the database versions correctly.   With this in mind, there is one particular class of data points that I'd point out, that you'll be able to spot:  if you compile all of the data for a given genotype, and the % change is above +30%, yet the n is only 5 cells, there is data missing for that genotype.  Specifically, we always added at least 20 more cells for anything that tested over +30% at the 5-cell n, to confirm whether it was long-lived at a higher n, and it was we added many more cells later on.  If you look at these cases, they are almost always examples where the deletion is around 26 or so (typical WT), and the WT control is unusually short lived, so these are genotypes that did not test out to be long lived once 20 cells were added, but where that subsequent not-long-lived 20 cell retest data was among the data lost to the cryptolocker fiasco.  Hope that makes sense.
+```
+Translation: exclude any perturbation genotype with percent_change>30 and set_lifespan_count<=5.
+
+```{r}
+d0<-read.csv("data/mccormick2015.csv",stringsAsFactors=FALSE)
+#remove bad genotypes with missing data
+#need to pool across experiments
+d<-d0[,c("set_genotype","set_lifespans","ref_lifespans")]
+d<-d %>% group_by(set_genotype) %>% summarise(set_lifespans=merge_lifespans(set_lifespans),ref_lifespans=merge_lifespans(ref_lifespans))
+d<-d %>% transform(set_lifespan_count=str2count(set_lifespans),set_lifespan_mean=str2mean(set_lifespans),ref_lifespan_mean=str2mean(ref_lifespans))
+d<-d %>% transform(percent_change=(set_lifespan_mean-ref_lifespan_mean)*100/ref_lifespan_mean)
+bad<-d %>% filter(percent_change>30 & set_lifespan_count<=5)
+bad<-bad$set_genotype
+d<-d0[!(d0$set_genotype %in% bad),]
+
+sort(table(d$ref_genotype),decreasing=TRUE)
+#restrict data to only the reference genotypes BY4742 and BY4741 (this is almost everything)
+d<-d[d$ref_genotype %in% c("BY4742","BY4741"),]
+#restrict to experiments with same ref and set background
+d<-d[d$ref_background==d$set_background,]
+#misc data cleanup, remove extra cols
+#all experiments had set media YPD and temp 30C
+extra_cols<-c("ref_locus_tag","set_locus_tag","pooled_by","ref_temperature","set_temperature","set_media","ref_media")
+d[,extra_cols]<-NULL
+#how many single gene vs multi gene deletions?
+mcp<-perts2uniquegenes(d$set_genotype)
+ng<-ngenes_per_perturbation(d$set_genotype)
+table(ng)
+d$numgenes<-ng
+saveRDS(d,file="data/mccormick_all.rds")
+```
+
+single gene perturbation experiments only
+
+```{r}
+#d<-readRDS("data/mccormick_all.rds")
+#restrict to only single-gene deletions
+d1<-d[d$numgenes==1,]
+#mating types
+table(d1$ref_mating_type)
+
+cnames<-c("name","background","mating_type","genotype","lifespans")
+d1s<-d1[,c("id","experiments",paste("set",cnames,sep="_"))]
+colnames(d1s)[3:ncol(d1s)]<-cnames
+d1s$is_ref<-FALSE
+d1r<-d1[,c("id","experiments",paste("ref",cnames,sep="_"))]
+colnames(d1r)[3:ncol(d1r)]<-cnames
+d1r$is_ref<-TRUE
+d1<-rbind(d1s,d1r)
+d1$bind_id<-seq.int(nrow(d1))
+lifespans<-strsplit(d1$lifespans,",",fixed=TRUE)
+lifespans<-lapply(lifespans,as.numeric)
+n<-sapply(lifespans,length)
+d1a<-data.frame(lifespan=unlist(lifespans),bind_id=rep(d1$bind_id,n))
+d1$lifespans<-NULL
+for(j in c("id","experiments","name","background","mating_type","genotype")){
+  d1[,j]<-factor(d1[,j])
+}
+#one row per data point instead of per experiment
+d1<-merge(d1,d1a,by="bind_id")
+saveRDS(d1,file="data/mccormick_singlegene.rds")
+```
+
+sanity check, replicate figure 3a from paper with survival curves
+
+```{r}
+#d1<-readRDS("data/mccormick_singlegene.rds")
+los1_ids<-unique(d1$id[d1$genotype=="los1"])
+q<-d1[d1$id %in% los1_ids,]
+q$geno<-ifelse(q$genotype=="los1","los1","WT")
+fit<-survfit(Surv(lifespan)~geno,data=q)
+ggsurvplot(fit,data=q)
+```
+
+## Kemmeren 2014 Gene Expression
+
+Gene expression (2-color microarray) for about 1500 single gene deletion yeast mutants. The data were obtained from http://deleteome.holstegelab.nl. Click downloads and select all mutants, not excluding wild type variable genes.
+
+```
+wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
+```
+
+```{r}
+#Read in data
+#d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt")
+d <- read.delim("data/deleteome_all_mutants_controls.txt")
+gdata<-d[2:nrow(d),1:3]
+guniq<-!duplicated(gdata$geneSymbol)
+gdata<-gdata[guniq,]
+d_a<-d[2:nrow(d),seq(from=4,to=ncol(d),by=3)] #average of logs
+d_m<-d[2:nrow(d),seq(from=5,to=ncol(d),by=3)] #difference of logs
+d_p<-d[2:nrow(d),seq(from=6,to=ncol(d),by=3)] #p-values
+#exclude the three control experiments at the end and duplicated genes
+d_a<-d_a[guniq,1:(ncol(d_a)-3)]
+d_m<-d_m[guniq,1:(ncol(d_m)-3)]
+d_p<-d_p[guniq,1:(ncol(d_p)-3)]
+cnames<-colnames(d_a)
+colnames(d_m)<-colnames(d_p)<-cnames
+#extract symbol of gene that was perturbed
+perts<-sapply(strsplit(cnames,"\\."),function(t){toupper(t[1])})
+#how many perturbation genes were measured?
+table(perts %in% gdata$geneSymbol)
+cdata<-data.frame(pert_geneSymbol=perts)
+rownames(cdata)<-cnames
+se<-SummarizedExperiment(list(logratio=d_m,avglog=d_a,pval=d_p),rowData=gdata,colData=cdata,metadata=list("logratio: M values, avglog: A values, the expression values are a contrast between gene knockout perturbation versus control"))
+rownames(se)<-gdata$geneSymbol
+saveRDS(se,"data/deleteome_all_mutants_controls.rds")
+```
+
+## Merge Gene Expression and Survival Data
+
+Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
+set_lifespan_mean
+
+```{r}
+#sv<-readRDS("data/mccormick_singlegene.rds")
+#ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+sv<-subset(sv,is_ref==FALSE)
+#collapse survival to mean or median value for each gene
+#ignoring batch effects across experiments, mating_types etc
+sv1<-sv %>% group_by(genotype) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan))
+sv1<-sv1 %>% transform(genotype=toupper(genotype))
+
+table(rownames(ge) %in% sv1$genotype)
+table(sv1$genotype %in% rownames(ge))
+
+sv1<-sv1 %>% subset(genotype %in% rownames(ge))
+ge1<-ge[rownames(ge) %in% sv1$genotype,]
+X<-assay(ge1,"logratio")[sv1$genotype,] #sort order match
+dat<-cbind(sv1[,2:3],X)
+rownames(dat)<-rownames(X)
+write.table(dat,file="data/merged_deleteome_mccormick.txt")
+```
+
+### old stuff
+
+split clusters in two during burn-in for Gibbs
+use weak limit Dirichlet prior over class probabilities
+
+```{r}
+#old stuff
+#sv<-readRDS("data/mccormick_all.rds")
+#compare overlap between deleteome and mccormick
+gdata<-rowData(ge)
+"VMA2" %in% gdata$geneSymbol
+#overlap between deleteome perts and survival perts
+perts<-colData(ge)$pert_geneSymbol
+table(perts %in% mcp)
+table(perts %in% mcp,perts %in% gdata$geneSymbol)
+#overlap between deleteome gene measurements and survival perts
+mcp<-perts2uniquegenes(sv$set_genotype)
+table(mcp %in% gdata$geneSymbol)
+table(gdata$geneSymbol %in% mcp)
+head(mcp[!(mcp %in% gdata$geneSymbol)])
+#combine data for use in regression models
+```
