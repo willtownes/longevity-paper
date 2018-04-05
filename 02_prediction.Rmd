@@ -5,8 +5,46 @@ date: "3/29/2018"
 output: html_document
 ---
 
+```{r}
+library(caret)
+library(glmnet)
+```
+
 ## Data Loading
 
 ```{r}
+d0<-read.table("data/merged_deleteome_mccormick.txt")
+```
+```{r}
+#median is second column
+col_subset<-sample(3:ncol(d0),50)
+d<-d0[,c(1,col_subset)]
+ymn<-d[,1]
+train_idx<-createDataPartition(ymn,p=.6,list=FALSE)
+ytrn<-ymn[train_idx]
+ytst<-ymn[-train_idx]
+Xtrn<-d[train_idx,2:ncol(d)]
+Xtst<-d[-train_idx,2:ncol(d)]
+pp<-preProcess(Xtrn,method=c("center","scale"))
+Xtrn<-cbind(1,predict(pp,Xtrn))
+Xtst<-cbind(1,predict(pp,Xtst))
+#folds<-createFolds(ytrn)
+#res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
+res<-cv.glmnet(as.matrix(Xtrn),ytrn,alpha=0.9)
+#saveRDS(res,file="glmnet_fit.rds")
+plot(res)
+```
 
+```{r}
+rmse<-function(ytrue,ypred){
+  sqrt(mean((ytrue-ypred)^2))
+}
+ypred<-predict(res, newx = as.matrix(Xtst), s = "lambda.min")
+(rmse_glmnet<-rmse(ypred,ytst))
+(rmse_mean_only<-rmse(mean(ytrn),ytst))
+```
+
+```{r}
+system.time(res2<-train(mean_lifespan~.,data=d[train_idx,],method="gbm",distribution="gaussian",preProcess=c("center","scale"),verbose=FALSE))
+print(res2)
 ```
