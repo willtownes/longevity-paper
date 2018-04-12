@@ -13,7 +13,7 @@ library(glmnet)
 ## Data Loading
 
 ```{r}
-d0<-read.table("data/merged_deleteome_mccormick.txt")
+d0<-read.table("data/merged_deleteome_mccormick_pert_genes.txt")
 ```
 ```{r}
 #median is second column
