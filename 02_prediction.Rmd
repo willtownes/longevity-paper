@@ -13,11 +13,13 @@ library(glmnet)
 ## Data Loading
 
 ```{r}
+#d0<-read.table("data/merged_deleteome_mccormick_expr_genes.txt")
 d0<-read.table("data/merged_deleteome_mccormick_pert_genes.txt")
 ```
 ```{r}
 #median is second column
-col_subset<-sample(3:ncol(d0),50)
+nsample<-200 #ncol(d0)-2
+col_subset<-sample(3:ncol(d0),nsample)
 d<-d0[,c(1,col_subset)]
 ymn<-d[,1]
 train_idx<-createDataPartition(ymn,p=.6,list=FALSE)
