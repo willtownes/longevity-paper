@@ -153,7 +153,11 @@ wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutant
 ```{r}
 #Read in data
 #d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt")
-d <- read.delim("data/deleteome_all_mutants_controls.txt")
+d <- read.delim("data/deleteome_all_mutants_controls.txt",stringsAsFactors=FALSE)
+df2mat<-function(df){
+  #convert a string data frame into a numeric matrix of same dimension
+  matrix(as.numeric(as.matrix(df)),nrow=nrow(df),dimnames=dimnames(df))
+}
 gdata<-d[2:nrow(d),1:3]
 guniq<-!duplicated(gdata$geneSymbol)
 gdata<-gdata[guniq,]
@@ -161,9 +165,9 @@ d_a<-d[2:nrow(d),seq(from=4,to=ncol(d),by=3)] #average of logs
 d_m<-d[2:nrow(d),seq(from=5,to=ncol(d),by=3)] #difference of logs
 d_p<-d[2:nrow(d),seq(from=6,to=ncol(d),by=3)] #p-values
 #exclude the three control experiments at the end and duplicated genes
-d_a<-d_a[guniq,1:(ncol(d_a)-3)]
-d_m<-d_m[guniq,1:(ncol(d_m)-3)]
-d_p<-d_p[guniq,1:(ncol(d_p)-3)]
+d_a<-df2mat(d_a[guniq,1:(ncol(d_a)-3)])
+d_m<-df2mat(d_m[guniq,1:(ncol(d_m)-3)])
+d_p<-df2mat(d_p[guniq,1:(ncol(d_p)-3)])
 cnames<-colnames(d_a)
 colnames(d_m)<-colnames(d_p)<-cnames
 #extract symbol of gene that was perturbed
@@ -180,26 +184,37 @@ saveRDS(se,"data/deleteome_all_mutants_controls.rds")
 ## Merge Gene Expression and Survival Data
 
 Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
-set_lifespan_mean
 
 ```{r}
-#sv<-readRDS("data/mccormick_singlegene.rds")
-#ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-sv<-subset(sv,is_ref==FALSE)
+sv<-readRDS("data/mccormick_singlegene.rds")
+ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+sv<-subset(sv,is_ref==FALSE) %>% transform(genotype=toupper(genotype))
 #collapse survival to mean or median value for each gene
 #ignoring batch effects across experiments, mating_types etc
-sv1<-sv %>% group_by(genotype) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan))
-sv1<-sv1 %>% transform(genotype=toupper(genotype))
+sv<-sv %>% group_by(genotype) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan))
 
-table(rownames(ge) %in% sv1$genotype)
-table(sv1$genotype %in% rownames(ge))
-
-sv1<-sv1 %>% subset(genotype %in% rownames(ge))
+#expressed genes vs RLS perturbs
+table(rownames(ge) %in% sv$genotype)
+table(sv$genotype %in% rownames(ge))
+sv1<-sv %>% subset(genotype %in% rownames(ge))
 ge1<-ge[rownames(ge) %in% sv1$genotype,]
 X<-assay(ge1,"logratio")[sv1$genotype,] #sort order match
 dat<-cbind(sv1[,2:3],X)
 rownames(dat)<-rownames(X)
-write.table(dat,file="data/merged_deleteome_mccormick.txt")
+write.table(dat,file="data/merged_deleteome_mccormick_expr_genes.txt")
+
+#perturbed genes vs RLS perturbs
+ge_perts<-colData(ge)$pert_geneSymbol
+table(ge_perts %in% sv$genotype)
+table(sv$genotype %in% ge_perts)
+sv2<-sv %>% subset(genotype %in% ge_perts)
+ge2<-ge[,ge_perts %in% sv2$genotype]
+rownames(ge2)<-paste0("expr_",rownames(ge2))
+colnames(ge2)<-colData(ge2)$pert_geneSymbol
+X2<-t(assay(ge2,"logratio")[,sv2$genotype])
+dat2<-cbind(sv2[,2:3],X2)
+rownames(dat2)<-rownames(X2)
+write.table(dat2,file="data/merged_deleteome_mccormick_pert_genes.txt")
 ```
 
 ### old stuff
