@@ -188,30 +188,40 @@ Find genes that were measured in the deleteome across perturbations and also for
 ```{r}
 sv<-readRDS("data/mccormick_singlegene.rds")
 ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-sv<-subset(sv,is_ref==FALSE) %>% transform(genotype=toupper(genotype))
+#sv<-subset(sv,is_ref==FALSE) %>% transform(genotype=toupper(genotype))
 #collapse survival to mean or median value for each gene
 #ignoring batch effects across experiments, mating_types etc
-sv<-sv %>% group_by(genotype) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan))
+sv<-sv %>% group_by(id,experiments,genotype,is_ref) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan)) %>% transform(genotype=toupper(genotype))
+sv1<-subset(sv,is_ref==TRUE)
+sv1$is_ref<-NULL
+colnames(sv1)[3:5]<-paste0("ref_",colnames(sv1)[3:5])
+sv2<-subset(sv,is_ref==FALSE)
+sv2$is_ref<-NULL
+colnames(sv2)[3:5]<-paste0("set_",colnames(sv2)[3:5])
+sv<-sv1 %>% inner_join(sv2,by=c("id","experiments"))
+sv<-sv %>% transform(mean_lifespan_change=set_mean_lifespan-ref_mean_lifespan,median_lifespan_change=set_median_lifespan-ref_median_lifespan)
+ynames<-c("mean_lifespan","median_lifespan")
+ynames<-c(paste0("ref_",ynames),paste0("set_",ynames),paste0(ynames,"_change"))
 
 #expressed genes vs RLS perturbs
-table(rownames(ge) %in% sv$genotype)
-table(sv$genotype %in% rownames(ge))
-sv1<-sv %>% subset(genotype %in% rownames(ge))
-ge1<-ge[rownames(ge) %in% sv1$genotype,]
-X<-assay(ge1,"logratio")[sv1$genotype,] #sort order match
-dat<-cbind(sv1[,2:3],X)
+table(rownames(ge) %in% sv$set_genotype)
+table(sv$set_genotype %in% rownames(ge))
+sv1<-sv %>% subset(set_genotype %in% rownames(ge))
+ge1<-ge[rownames(ge) %in% sv1$set_genotype,]
+X<-assay(ge1,"logratio")[sv1$set_genotype,] #sort order match
+dat<-cbind(sv1[,ynames],X)
 rownames(dat)<-rownames(X)
 write.table(dat,file="data/merged_deleteome_mccormick_expr_genes.txt")
 
 #perturbed genes vs RLS perturbs
 ge_perts<-colData(ge)$pert_geneSymbol
-table(ge_perts %in% sv$genotype)
-table(sv$genotype %in% ge_perts)
-sv2<-sv %>% subset(genotype %in% ge_perts)
-ge2<-ge[,ge_perts %in% sv2$genotype]
+table(ge_perts %in% sv$set_genotype)
+table(sv$set_genotype %in% ge_perts)
+sv2<-sv %>% subset(set_genotype %in% ge_perts)
+ge2<-ge[,ge_perts %in% sv2$set_genotype]
 rownames(ge2)<-paste0("expr_",rownames(ge2))
 colnames(ge2)<-colData(ge2)$pert_geneSymbol
-X2<-t(assay(ge2,"logratio")[,sv2$genotype])
+X2<-t(assay(ge2,"logratio")[,sv2$set_genotype])
 dat2<-cbind(sv2[,2:3],X2)
 rownames(dat2)<-rownames(X2)
 write.table(dat2,file="data/merged_deleteome_mccormick_pert_genes.txt")
