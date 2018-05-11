@@ -13,13 +13,14 @@ library(glmnet)
 ## Data Loading
 
 ```{r}
-#d0<-read.table("data/merged_deleteome_mccormick_expr_genes.txt")
-d0<-read.table("data/merged_deleteome_mccormick_pert_genes.txt")
+d01<-read.table("data/merged_deleteome_mccormick_expr_genes.txt")
+d02<-read.table("data/merged_deleteome_mccormick_pert_genes.txt")
+d0<-d02
 ```
 ```{r}
-#median is second column
-nsample<-200 #ncol(d0)-2
-col_subset<-sample(3:ncol(d0),nsample)
+#weighted mean lifespan is first column
+nsample<-500 #ncol(d0)-2
+col_subset<-sample(2:ncol(d0),nsample)
 d<-d0[,c(1,col_subset)]
 ymn<-d[,1]
 train_idx<-createDataPartition(ymn,p=.6,list=FALSE)
@@ -32,7 +33,7 @@ Xtrn<-cbind(1,predict(pp,Xtrn))
 Xtst<-cbind(1,predict(pp,Xtst))
 #folds<-createFolds(ytrn)
 #res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
-res<-cv.glmnet(as.matrix(Xtrn),ytrn,alpha=0.9)
+res<-cv.glmnet(as.matrix(Xtrn),ytrn,alpha=1.0)
 #saveRDS(res,file="glmnet_fit.rds")
 plot(res)
 ```
@@ -47,6 +48,6 @@ ypred<-predict(res, newx = as.matrix(Xtst), s = "lambda.min")
 ```
 
 ```{r}
-system.time(res2<-train(mean_lifespan~.,data=d[train_idx,],method="gbm",distribution="gaussian",preProcess=c("center","scale"),verbose=FALSE))
+system.time(res2<-train(lifespan_change~.,data=d[train_idx,],method="gbm",distribution="gaussian",preProcess=c("center","scale"),verbose=FALSE))
 print(res2)
 ```
