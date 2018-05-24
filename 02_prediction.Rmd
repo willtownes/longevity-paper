@@ -19,9 +19,12 @@ d0<-d02
 ```
 ```{r}
 #weighted mean lifespan is first column
-nsample<-500 #ncol(d0)-2
-col_subset<-sample(2:ncol(d0),nsample)
-d<-d0[,c(1,col_subset)]
+#nsample<-500 #ncol(d0)-2
+#col_subset<-sample(2:ncol(d0),nsample)
+#d<-d0[,c(1,col_subset)]
+v<-svd(d0[,2:ncol(d0)],nu=500,nv=500)$v
+d<-cbind(d0[,1],as.matrix(d0[,2:ncol(d0)])%*%v)
+colnames(d)<-c("lifespan_change",paste0("x",1:(ncol(d)-1)))
 ymn<-d[,1]
 train_idx<-createDataPartition(ymn,p=.6,list=FALSE)
 ytrn<-ymn[train_idx]

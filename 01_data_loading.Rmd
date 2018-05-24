@@ -11,6 +11,9 @@ library(dplyr)
 library(SummarizedExperiment)
 library(survival)
 library(survminer)
+
+#mutants<-"all"
+mutants<-"responsive"
 ```
 
 # Load and clean raw data
@@ -152,8 +155,11 @@ wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutant
 
 ```{r}
 #Read in data
-#d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt")
-d <- read.delim("data/deleteome_all_mutants_controls.txt",stringsAsFactors=FALSE)
+if(mutants=="responsive"){
+  d <- read.delim("data/deleteome_responsive_mutants_ex_wt_var_controls.txt",stringsAsFactors=FALSE)
+} else if(mutants=="all"){
+  d <- read.delim("data/deleteome_all_mutants_controls.txt",stringsAsFactors=FALSE)
+} else { stop("invalid mutant choice") }
 df2mat<-function(df){
   #convert a string data frame into a numeric matrix of same dimension
   matrix(as.numeric(as.matrix(df)),nrow=nrow(df),dimnames=dimnames(df))
@@ -178,7 +184,11 @@ cdata<-data.frame(pert_geneSymbol=perts)
 rownames(cdata)<-cnames
 se<-SummarizedExperiment(list(logratio=d_m,avglog=d_a,pval=d_p),rowData=gdata,colData=cdata,metadata=list("logratio: M values, avglog: A values, the expression values are a contrast between gene knockout perturbation versus control"))
 rownames(se)<-gdata$geneSymbol
-saveRDS(se,"data/deleteome_all_mutants_controls.rds")
+if(mutants=="all"){
+  saveRDS(se,"data/deleteome_all_mutants_controls.rds")
+} else if(mutants=="responsive") {
+  saveRDS(se,"data/deleteome_responsive_mutants.rds")
+}
 ```
 
 ## Merge Gene Expression and Survival Data
@@ -187,7 +197,11 @@ Find genes that were measured in the deleteome across perturbations and also for
 
 ```{r}
 sv<-readRDS("data/mccormick_singlegene.rds")
-ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+if(mutants=="all"){
+  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+} else if(mutants=="responsive"){
+  ge<-readRDS("data/deleteome_responsive_mutants.rds")
+} else { stop("invalid mutant") }
 #sv<-subset(sv,is_ref==FALSE) %>% transform(genotype=toupper(genotype))
 #collapse survival to mean or median value for each gene
 #ignoring batch effects across experiments, mating_types etc
