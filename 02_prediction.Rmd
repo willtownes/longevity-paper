@@ -8,6 +8,7 @@ output: html_document
 ```{r}
 library(caret)
 library(glmnet)
+binarize<-TRUE
 ```
 
 ## Data Loading
@@ -16,9 +17,19 @@ library(glmnet)
 d01<-read.table("data/merged_deleteome_mccormick_expr_genes.txt")
 d02<-read.table("data/merged_deleteome_mccormick_pert_genes.txt")
 d0<-d02
+if(binarize==TRUE){
+  pvals<-read.csv("data/mccormick_all_pvals.csv")
+  pvals<-pvals[toupper(pvals$set_genotype) %in% rownames(d0),]
+  rownames(pvals)<-toupper(pvals$set_genotype)
+  pvals<-pvals[rownames(d0),]
+  lifespan_change<-pvals$combined_pval<.05 & d0$lifespan_change>0
+  d0$lifespan_change<-as.numeric(lifespan_change)
+  mean(d0$lifespan_change) #should be about .11
+}
 ```
 ```{r}
-#weighted mean lifespan is first column
+#if not binarize, weighted mean lifespan is first column
+#otherwise, lifespan_change is 0 for negative or no change, 1 for positive change
 #nsample<-500 #ncol(d0)-2
 #col_subset<-sample(2:ncol(d0),nsample)
 #d<-d0[,c(1,col_subset)]
@@ -36,7 +47,11 @@ Xtrn<-cbind(1,predict(pp,Xtrn))
 Xtst<-cbind(1,predict(pp,Xtst))
 #folds<-createFolds(ytrn)
 #res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
-res<-cv.glmnet(as.matrix(Xtrn),ytrn,alpha=1.0)
+if(binarize==TRUE){
+  res<-cv.glmnet(as.matrix(Xtrn),ytrn,family="binomial",alpha=1.0)
+} else {
+  res<-cv.glmnet(as.matrix(Xtrn),ytrn,alpha=1.0)
+}
 #saveRDS(res,file="glmnet_fit.rds")
 plot(res)
 ```
@@ -45,12 +60,13 @@ plot(res)
 rmse<-function(ytrue,ypred){
   sqrt(mean((ytrue-ypred)^2))
 }
-ypred<-predict(res, newx = as.matrix(Xtst), s = "lambda.min")
+ypred<-predict(res, newx = as.matrix(Xtst), s = "lambda.min",type="response")
 (rmse_glmnet<-rmse(ypred,ytst))
 (rmse_mean_only<-rmse(mean(ytrn),ytst))
 ```
 
 ```{r}
-system.time(res2<-train(lifespan_change~.,data=d[train_idx,],method="gbm",distribution="gaussian",preProcess=c("center","scale"),verbose=FALSE))
+distrib<-if(binarize==TRUE) "binomial" else "gaussian"
+system.time(res2<-train(lifespan_change~.,data=d[train_idx,],method="gbm",distribution=distrib,preProcess=c("center","scale"),verbose=FALSE))
 print(res2)
 ```

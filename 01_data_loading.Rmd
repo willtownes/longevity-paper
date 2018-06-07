@@ -33,6 +33,12 @@ str2mean<-function(y){
 str2count<-function(y){
   vapply(y,function(t){length(str2vec(t))},FUN.VALUE=1)
 }
+ranksum_test_pval<-function(set_vals,ref_vals,exact=FALSE,...){
+  wilcox.test(str2vec(set_vals),str2vec(ref_vals),exact=exact,...)$p.value
+}
+str2pval<-function(x,y){
+  mapply(ranksum_test_pval,x,y)
+}
 perts2uniquegenes<-function(x){
   #x a list of space-separated gene symbols
   #each item is a perturbation, can have many genes per perturbation
@@ -100,6 +106,14 @@ mcp<-perts2uniquegenes(d$set_genotype)
 ng<-ngenes_per_perturbation(d$set_genotype)
 table(ng)
 d$numgenes<-ng
+
+#compute p-values by genotype instead of by experiment
+d1<-d[,c("set_genotype","set_lifespans","ref_lifespans","ranksum_p")]
+d1<-d1 %>% group_by(set_genotype) %>% summarise(set_lifespans=merge_lifespans(set_lifespans),ref_lifespans=merge_lifespans(ref_lifespans),max_pval=max(ranksum_p),min_pval=min(ranksum_p))
+d1<-d1 %>% mutate(combined_pval=str2pval(set_lifespans,ref_lifespans))
+d1<-d1 %>% select(set_genotype,max_pval,min_pval,combined_pval)
+write.csv(as.data.frame(d1),file="data/mccormick_all_pvals.csv",row.names=FALSE)
+#d<-d %>% left_join(d1,by="set_genotype")
 saveRDS(d,file="data/mccormick_all.rds")
 ```
 
@@ -151,6 +165,7 @@ Gene expression (2-color microarray) for about 1500 single gene deletion yeast m
 
 ```
 wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_all_mutants_controls.txt
+wget -P data http://deleteome.holstegelab.nl/data/downloads/deleteome_responsive_mutants_ex_wt_var_controls.txt
 ```
 
 ```{r}
