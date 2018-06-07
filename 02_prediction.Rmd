@@ -24,18 +24,19 @@ if(binarize==TRUE){
   pvals<-pvals[rownames(d0),]
   lifespan_change<-pvals$combined_pval<.05 & d0$lifespan_change>0
   d0$lifespan_change<-as.numeric(lifespan_change)
-  mean(d0$lifespan_change) #should be about .11
+  mean(d0$lifespan_change)
 }
 ```
 ```{r}
 #if not binarize, weighted mean lifespan is first column
 #otherwise, lifespan_change is 0 for negative or no change, 1 for positive change
-#nsample<-500 #ncol(d0)-2
-#col_subset<-sample(2:ncol(d0),nsample)
-#d<-d0[,c(1,col_subset)]
-v<-svd(d0[,2:ncol(d0)],nu=500,nv=500)$v
-d<-cbind(d0[,1],as.matrix(d0[,2:ncol(d0)])%*%v)
-colnames(d)<-c("lifespan_change",paste0("x",1:(ncol(d)-1)))
+nsample<-5000 #ncol(d0)-2
+col_subset<-sample(2:ncol(d0),nsample)
+d<-d0[,c(1,col_subset)]
+#v<-svd(d0[,2:ncol(d0)],nu=500,nv=500)$v
+#d<-cbind(d0[,1],as.matrix(d0[,2:ncol(d0)])%*%v)
+#colnames(d)<-c("lifespan_change",paste0("x",1:(ncol(d)-1)))
+#d<-d0
 ymn<-d[,1]
 train_idx<-createDataPartition(ymn,p=.6,list=FALSE)
 ytrn<-ymn[train_idx]
@@ -47,6 +48,11 @@ Xtrn<-cbind(1,predict(pp,Xtrn))
 Xtst<-cbind(1,predict(pp,Xtst))
 #folds<-createFolds(ytrn)
 #res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
+```
+
+GLMnet prediction
+
+```{r}
 if(binarize==TRUE){
   res<-cv.glmnet(as.matrix(Xtrn),ytrn,family="binomial",alpha=1.0)
 } else {

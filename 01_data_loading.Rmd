@@ -9,9 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library(SummarizedExperiment)
-library(survival)
-library(survminer)
-
 #mutants<-"all"
 mutants<-"responsive"
 ```
@@ -82,6 +79,7 @@ Translation: exclude any perturbation genotype with percent_change>30 and set_li
 
 ```{r}
 d0<-read.csv("data/mccormick2015.csv",stringsAsFactors=FALSE)
+d0$set_genotype<-toupper(d0$set_genotype)
 #remove bad genotypes with missing data
 #need to pool across experiments
 d<-d0[,c("set_genotype","set_lifespans","ref_lifespans")]
@@ -102,61 +100,19 @@ d<-d[d$ref_background==d$set_background,]
 extra_cols<-c("ref_locus_tag","set_locus_tag","pooled_by","ref_temperature","set_temperature","set_media","ref_media")
 d[,extra_cols]<-NULL
 #how many single gene vs multi gene deletions?
-mcp<-perts2uniquegenes(d$set_genotype)
+#mcp<-perts2uniquegenes(d$set_genotype)
 ng<-ngenes_per_perturbation(d$set_genotype)
 table(ng)
 d$numgenes<-ng
 
-#compute p-values by genotype instead of by experiment
-d1<-d[,c("set_genotype","set_lifespans","ref_lifespans","ranksum_p")]
-d1<-d1 %>% group_by(set_genotype) %>% summarise(set_lifespans=merge_lifespans(set_lifespans),ref_lifespans=merge_lifespans(ref_lifespans),max_pval=max(ranksum_p),min_pval=min(ranksum_p))
-d1<-d1 %>% mutate(combined_pval=str2pval(set_lifespans,ref_lifespans))
-d1<-d1 %>% select(set_genotype,max_pval,min_pval,combined_pval)
-write.csv(as.data.frame(d1),file="data/mccormick_all_pvals.csv",row.names=FALSE)
-#d<-d %>% left_join(d1,by="set_genotype")
-saveRDS(d,file="data/mccormick_all.rds")
-```
-
-single gene perturbation experiments only
-
-```{r}
-#d<-readRDS("data/mccormick_all.rds")
-#restrict to only single-gene deletions
-d1<-d[d$numgenes==1,]
-#mating types
-table(d1$ref_mating_type)
-
-cnames<-c("name","background","mating_type","genotype","lifespans")
-d1s<-d1[,c("id","experiments",paste("set",cnames,sep="_"))]
-colnames(d1s)[3:ncol(d1s)]<-cnames
-d1s$is_ref<-FALSE
-d1r<-d1[,c("id","experiments",paste("ref",cnames,sep="_"))]
-colnames(d1r)[3:ncol(d1r)]<-cnames
-d1r$is_ref<-TRUE
-d1<-rbind(d1s,d1r)
-d1$bind_id<-seq.int(nrow(d1))
-lifespans<-strsplit(d1$lifespans,",",fixed=TRUE)
-lifespans<-lapply(lifespans,as.numeric)
-n<-sapply(lifespans,length)
-d1a<-data.frame(lifespan=unlist(lifespans),bind_id=rep(d1$bind_id,n))
-d1$lifespans<-NULL
-for(j in c("id","experiments","name","background","mating_type","genotype")){
-  d1[,j]<-factor(d1[,j])
-}
-#one row per data point instead of per experiment
-d1<-merge(d1,d1a,by="bind_id")
-saveRDS(d1,file="data/mccormick_singlegene.rds")
-```
-
-sanity check, replicate figure 3a from paper with survival curves
-
-```{r}
-#d1<-readRDS("data/mccormick_singlegene.rds")
-los1_ids<-unique(d1$id[d1$genotype=="los1"])
-q<-d1[d1$id %in% los1_ids,]
-q$geno<-ifelse(q$genotype=="los1","los1","WT")
-fit<-survfit(Surv(lifespan)~geno,data=q)
-ggsurvplot(fit,data=q)
+#merge all experiments from same genotype
+d<-d %>% mutate(mean_lifespan_change=set_lifespan_mean-ref_lifespan_mean,ivar_wt=1/(1/set_lifespan_count+1/ref_lifespan_count))
+d<-d %>% group_by(set_genotype) %>% summarise(lifespan_change=sum(mean_lifespan_change*ivar_wt)/sum(ivar_wt), set_lifespans=merge_lifespans(set_lifespans), ref_lifespans=merge_lifespans(ref_lifespans), max_pval=max(ranksum_p), min_pval=min(ranksum_p))
+d<-d %>% mutate(combined_pval=str2pval(set_lifespans,ref_lifespans))
+d<-d %>% select(-c(set_lifespans,ref_lifespans))
+d<-d %>% mutate(numgenes=ngenes_per_perturbation(set_genotype))
+d %>% subset(set_genotype=="LOS1") #should be about +7
+write.csv(as.data.frame(d),file="data/mccormick_all.csv",row.names=FALSE)
 ```
 
 ## Kemmeren 2014 Gene Expression
@@ -211,28 +167,13 @@ if(mutants=="all"){
 Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
 
 ```{r}
-sv<-readRDS("data/mccormick_singlegene.rds")
+sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
+sv<-sv %>% subset(numgenes==1)
 if(mutants=="all"){
   ge<-readRDS("data/deleteome_all_mutants_controls.rds")
 } else if(mutants=="responsive"){
   ge<-readRDS("data/deleteome_responsive_mutants.rds")
 } else { stop("invalid mutant") }
-#sv<-subset(sv,is_ref==FALSE) %>% transform(genotype=toupper(genotype))
-#collapse survival to mean or median value for each gene
-#ignoring batch effects across experiments, mating_types etc
-sv<-sv %>% group_by(id,experiments,genotype,is_ref) %>% summarise(mean_lifespan=mean(lifespan),median_lifespan=median(lifespan),n=length(lifespan)) %>% transform(genotype=toupper(genotype))
-sv1<-subset(sv,is_ref==TRUE)
-sv1$is_ref<-NULL
-colnames(sv1)[3:6]<-paste0("ref_",colnames(sv1)[3:6])
-sv2<-subset(sv,is_ref==FALSE)
-sv2$is_ref<-NULL
-colnames(sv2)[3:6]<-paste0("set_",colnames(sv2)[3:6])
-sv<-sv1 %>% inner_join(sv2,by=c("id","experiments"))
-#account for experiment-level random effects
-#by using inverse variance weighting to pool across experiments
-sv<-sv %>% transform(mean_lifespan_change=set_mean_lifespan-ref_mean_lifespan,ivar_wt=1/(1/set_n+1/ref_n))
-sv<-sv %>% group_by(set_genotype) %>% summarise(lifespan_change=sum(mean_lifespan_change*ivar_wt)/sum(ivar_wt))
-sv %>% subset(set_genotype=="LOS1") #should be about +7
 
 #expressed genes vs RLS perturbs
 table(rownames(ge) %in% sv$set_genotype)
