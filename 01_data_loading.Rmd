@@ -162,43 +162,6 @@ if(mutants=="all"){
 }
 ```
 
-## Merge Gene Expression and Survival Data
-
-Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
-
-```{r}
-sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
-sv<-sv %>% subset(numgenes==1)
-if(mutants=="all"){
-  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-} else if(mutants=="responsive"){
-  ge<-readRDS("data/deleteome_responsive_mutants.rds")
-} else { stop("invalid mutant") }
-
-#expressed genes vs RLS perturbs
-table(rownames(ge) %in% sv$set_genotype)
-table(sv$set_genotype %in% rownames(ge))
-sv1<-sv %>% subset(set_genotype %in% rownames(ge))
-ge1<-ge[rownames(ge) %in% sv1$set_genotype,]
-X<-assay(ge1,"logratio")[sv1$set_genotype,] #sort order match
-dat<-cbind(sv1[,"lifespan_change"],X)
-rownames(dat)<-rownames(X)
-write.table(dat,file="data/merged_deleteome_mccormick_expr_genes.txt")
-
-#perturbed genes vs RLS perturbs
-ge_perts<-colData(ge)$pert_geneSymbol
-table(ge_perts %in% sv$set_genotype)
-table(sv$set_genotype %in% ge_perts)
-sv2<-sv %>% subset(set_genotype %in% ge_perts)
-ge2<-ge[,ge_perts %in% sv2$set_genotype]
-rownames(ge2)<-paste0("expr_",rownames(ge2))
-colnames(ge2)<-colData(ge2)$pert_geneSymbol
-X2<-t(assay(ge2,"logratio")[,sv2$set_genotype])
-dat2<-cbind(sv2[,"lifespan_change"],X2)
-rownames(dat2)<-rownames(X2)
-write.table(dat2,file="data/merged_deleteome_mccormick_pert_genes.txt")
-```
-
 ### old stuff
 
 split clusters in two during burn-in for Gibbs
