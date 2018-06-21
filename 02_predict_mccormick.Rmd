@@ -96,9 +96,21 @@ gradient boosted machines
 
 ```{r}
 distrib<-if(binarize==TRUE) "bernoulli" else "gaussian"
-system.time(res2<-train(Xtrn,factor(ytrn),method="gbm",distribution=distrib,preProcess=NULL,verbose=FALSE))
+system.time(res2<-train(Xtrn,factor(ytrn), method="gbm", distribution=distrib, preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(interaction.depth=c(2,3),n.trees=c(800,1600),shrinkage=.005,n.minobsinnode=10)))
 print(res2)
 probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values)) #0.6
+```
+
+svm
+
+```{r}
+distrib<-if(binarize==TRUE) "bernoulli" else "gaussian"
+system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution=distrib, preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5)))
+print(res3)
+probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
 (auc<-as.numeric(auc.tmp@y.values)) #0.6

@@ -15,6 +15,22 @@ mutants<-"responsive"
 
 # Load and clean raw data
 
+## GenAge Database
+
+```
+wget -P data https://genomics.senescence.info/genes/models_genes.zip
+unzip data/models_genes.zip -d data
+rm data/release.html
+```
+
+```{r}
+d<-read.csv("data/genage_models.csv")
+d1 <- d %>% subset(organism=="Saccharomyces cerevisiae" & longevity.influence %in% c("Pro-Longevity","Anti-Longevity")) %>% transform(symbol=toupper(symbol)) %>% mutate(pro_longevity=as.numeric(longevity.influence=="Pro-Longevity")) %>% select(symbol,pro_longevity)
+write.table(d1,file="data/genage_yeast.txt",row.names=FALSE)
+```
+
+## McCormick 2015 Replicative Lifespan
+
 Useful functions, mostly for McCormick data
 
 ```{r}
@@ -49,8 +65,6 @@ ngenes_per_perturbation<-function(x){
   sapply(sg,length)
 }
 ```
-
-## McCormick 2015 Replicative Lifespan
 
 This is genetic perturbation and replicative lifespan data for almost all genes in yeast. The original data was provided by Kareem Carr who had emailed the author and received an excel file in response. Also, the authors provided this information:
 
