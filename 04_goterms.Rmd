@@ -63,6 +63,22 @@ Xtrn<-Xs[train_idx,]
 Xtst<-Xs[-train_idx,]
 ```
 
+fixed prediction probability= probability of positive class
+
+```{r}
+probs<-rep(mean(ytrn==1),length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+```
+
+fixed prediction probability= all major (negative) class
+
+```{r}
+probs<-rep(0,length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values)) 
+```
+
 gradient boosted machines
 
 ```{r}
@@ -71,7 +87,7 @@ print(res2)
 probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
 svm with caret
@@ -81,7 +97,10 @@ print(res3)
 probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
+plot(performance(preds, measure = "tpr", x.measure = "fpr"),main="SVM")
+abline(v=1-.803)
+abline(h=0.6)
 ```
 
 GLMnet prediction
@@ -103,7 +122,7 @@ probs<-predict(res, newx=Xtst2, s="lambda.min", type="response")
 plot(res)
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.5
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
 naive bayes
@@ -118,6 +137,6 @@ print(res)
 probs<-predict(res,newdata=Xtst3,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
