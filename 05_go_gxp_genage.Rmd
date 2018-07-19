@@ -1,0 +1,144 @@
+---
+title: "Predicting Survival from GO terms and gene expression"
+author: "Will Townes"
+date: "6/29/2018"
+output: html_document
+---
+
+```{r}
+library(SummarizedExperiment)
+#library(dplyr)
+#library(tidyr)
+#library(reshape2)
+library(class)
+library(glmnet)
+library(caret)
+library(ROCR)
+mutants<-"responsive"
+#only works for measured genes not yet for perturbed genes
+```
+
+## Data Loading
+
+Merge GO terms, gene expression, and survival Data
+
+```{r}
+sv<-read.table("data/genage_yeast.txt",header=TRUE,stringsAsFactors = FALSE)
+ydb<-read.table("data/goterms_yeast.txt",header=TRUE,stringsAsFactors=FALSE)
+X<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
+
+if(mutants=="all"){
+  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+} else if(mutants=="responsive"){
+  ge<-readRDS("data/deleteome_responsive_mutants.rds")
+} else { stop("invalid mutant") }
+
+#expressed genes vs RLS perturbs
+sv$symbol<-toupper(sv$symbol)
+rownames(X)<-toupper(rownames(X))
+rownames(ge)<-toupper(rownames(ge))
+rownames(sv)<-sv$symbol
+gid<-intersect(sv$symbol,rownames(X))
+gid<-sort(intersect(gid,rownames(ge)))
+y<-sv[gid,"pro_longevity"]
+X<-cbind(X[gid,],assay(ge,"logratio")[gid,])
+X<-X[,apply(X,2,sd)>0] #remove features with no variation
+names(y)<-rownames(X)
+
+# train/test split
+train_idx<-createDataPartition(y,p=.75,list=FALSE)
+ytrn<-y[train_idx]
+ytst<-y[-train_idx]
+```
+
+knn classifier
+
+```{r}
+Xtrn<-X[train_idx,]
+Xtst<-X[-train_idx,]
+fit<-knn(Xtrn,Xtst,ytrn,k=10,prob=TRUE)
+probs<-attr(fit,"prob")
+probs[fit==0]<-1-probs[fit==0]
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values)) #0.6
+```
+
+regression-type models
+
+```{r}
+pca<-FALSE
+if(pca){
+  Xs<-X %*% svd(X,nu=500,nv=500)$v #if PCA adjustment
+  colnames(Xs)<-paste0("pca_",seq.int(500))
+} else {
+  #random subset of columns or use PCA to reduce dims
+  nsample<-min(2500,ncol(X))
+  Xs<-X[,sample.int(ncol(X),nsample)]
+}
+Xtrn<-Xs[train_idx,]
+Xtst<-Xs[-train_idx,]
+```
+
+fixed prediction probability= probability of positive class
+
+```{r}
+probs<-rep(mean(ytrn==1),length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+```
+
+fixed prediction probability= all major (negative) class
+
+```{r}
+probs<-rep(0,length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values)) 
+```
+
+gradient boosted machines
+
+```{r}
+system.time(res2<-train(Xtrn,factor(ytrn), method="gbm", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(interaction.depth=c(1,2),n.trees=c(800,1600),shrinkage=.005,n.minobsinnode=10)))
+print(res2)
+probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+```
+
+svm with caret
+```{r}
+system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5),prob.model=TRUE))
+print(res3)
+probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+plot(performance(preds, measure = "tpr", x.measure = "fpr"),main="SVM")
+abline(v=1-.803,lty=2)
+abline(h=0.6,lty=2)
+```
+
+GLMnet prediction
+
+```{r}
+#pp<-preProcess(Xtrn,method=c("center","scale"))
+#Xtrn2<-cbind(1,predict(pp,Xtrn))
+#Xtst2<-cbind(1,predict(pp,Xtst))
+Xtrn2<-cbind(1,Xtrn)
+Xtst2<-cbind(1,Xtst)
+
+#folds<-createFolds(ytrn)
+#res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
+
+alpha<-if(pca){ 0.0 }else{ .9 }
+res<-cv.glmnet(Xtrn2,ytrn,family="binomial",alpha=alpha)
+probs<-predict(res, newx=Xtst2, s="lambda.min", type="response")
+#saveRDS(res,file="glmnet_fit.rds")
+plot(res)
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+```
+
