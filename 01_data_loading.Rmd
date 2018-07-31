@@ -33,9 +33,10 @@ write.table(d1,file="data/genage_yeast.txt",row.names=FALSE)
 ## GO terms
 
 ```{r}
-d1<-read.table("data/genage_yeast.txt",header=TRUE)
+#d1<-read.table("data/genage_yeast.txt",header=TRUE)
 yeast<-useMart("ensembl",dataset="scerevisiae_gene_ensembl")
-ydb<-getBM(c("external_gene_name","go_id"),filters="external_gene_name",values=d1$symbol,mart=yeast)
+#ydb<-getBM(c("external_gene_name","go_id"),filters="external_gene_name",values=d1$symbol,mart=yeast)
+ydb<-getBM(c("external_gene_name","go_id"),mart=yeast)
 write.table(ydb,file="data/goterms_yeast.txt",row.names=FALSE)
 ```
 

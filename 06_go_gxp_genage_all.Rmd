@@ -23,10 +23,17 @@ mutants<-"responsive"
 Merge GO terms, gene expression, and survival Data
 
 ```{r}
-sv<-read.table("data/genage_yeast.txt",header=TRUE,stringsAsFactors = FALSE)
+d<-read.csv("data/genage_models.csv")
+d1<-subset(d,organism=="Saccharomyces cerevisiae" & longevity.influence != "Unclear")
+lg<-toupper(d1$symbol) #longevity genes
+
 ydb<-read.table("data/goterms_yeast.txt",header=TRUE,stringsAsFactors=FALSE)
-#ydb<-subset(ydb,external_gene_name %in% sv$symbol)
-X<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
+ydb<-subset(ydb,go_id!="")
+X0<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
+#exclude GO terms that appear in only a small number of genes
+thresh<-10
+gg<-colSums(X0)>=thresh
+X1<-X0[,gg]
 
 if(mutants=="all"){
   ge<-readRDS("data/deleteome_all_mutants_controls.rds")
@@ -35,66 +42,33 @@ if(mutants=="all"){
 } else { stop("invalid mutant") }
 
 #expressed genes vs RLS perturbs
-sv$symbol<-toupper(sv$symbol)
-rownames(X)<-toupper(rownames(X))
+rownames(X1)<-toupper(rownames(X1))
 rownames(ge)<-toupper(rownames(ge))
-rownames(sv)<-sv$symbol
-gid<-intersect(sv$symbol,rownames(X))
-gid<-sort(intersect(gid,rownames(ge)))
-y<-sv[gid,"pro_longevity"]
-X<-cbind(X[gid,],assay(ge,"logratio")[gid,])
-X<-X[,apply(X,2,sd)>0] #remove features with no variation
+gid<-sort(intersect(rownames(X1),rownames(ge)))
+y<-as.numeric(gid %in% lg)
+X<-cbind(X1[gid,],assay(ge,"logratio")[gid,])
 names(y)<-rownames(X)
 
 # train/test split
 train_idx<-createDataPartition(y,p=.75,list=FALSE)
 ytrn<-y[train_idx]
 ytst<-y[-train_idx]
+Xtrn<-X[train_idx,]
+Xtst<-X[-train_idx,]
+gg<-apply(Xtrn,2,sd)>0 #remove features with no variation
+Xtrn<-Xtrn[,gg]
+Xtst<-Xtst[,gg]
 ```
 
 knn classifier
 
 ```{r}
-Xtrn<-X[train_idx,]
-Xtst<-X[-train_idx,]
 fit<-knn(Xtrn,Xtst,ytrn,k=10,prob=TRUE)
 probs<-attr(fit,"prob")
 probs[fit==0]<-1-probs[fit==0]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
-```
-
-regression-type models
-
-```{r}
-pca<-FALSE
-if(pca){
-  Xs<-X %*% svd(X,nu=500,nv=500)$v #if PCA adjustment
-  colnames(Xs)<-paste0("pca_",seq.int(500))
-} else {
-  #random subset of columns or use PCA to reduce dims
-  nsample<-min(2500,ncol(X))
-  Xs<-X[,sample.int(ncol(X),nsample)]
-}
-Xtrn<-Xs[train_idx,]
-Xtst<-Xs[-train_idx,]
-```
-
-fixed prediction probability= probability of positive class
-
-```{r}
-probs<-rep(mean(ytrn==1),length(ytst))
-auc.tmp<-performance(prediction(probs,ytst),"auc")
-(auc<-as.numeric(auc.tmp@y.values))
-```
-
-fixed prediction probability= all major (negative) class
-
-```{r}
-probs<-rep(0,length(ytst))
-auc.tmp<-performance(prediction(probs,ytst),"auc")
-(auc<-as.numeric(auc.tmp@y.values)) 
+(auc<-as.numeric(auc.tmp@y.values)) #0.62
 ```
 
 gradient boosted machines
