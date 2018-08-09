@@ -1,55 +1,34 @@
 ---
-title: "Predicting Survival from Gene Expression"
+title: "Predicting Survival from GO terms"
 author: "Will Townes"
-date: "3/29/2018"
+date: "6/29/2018"
 output: html_document
 ---
 
 ```{r}
 library(SummarizedExperiment)
-library(dplyr)
 library(class)
 library(glmnet)
 library(caret)
 library(ROCR)
-library(e1071)
-mutants<-"responsive"
-measured_genes<-TRUE
+source("./util.R")
+spp<-c("yeast","worm","fly","mouse")
+sp<-spp[2]
 ```
 
 ## Data Loading
 
-Merge Gene Expression and Survival Data
-Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
+Merge GO terms and Survival Data
 
 ```{r}
-sv<-read.table("data/genage_yeast.txt",header=TRUE,stringsAsFactors = FALSE)
-
-if(mutants=="all"){
-  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-} else if(mutants=="responsive"){
-  ge<-readRDS("data/deleteome_responsive_mutants.rds")
-} else { stop("invalid mutant") }
-
-if(measured_genes==TRUE){
-  #expressed genes vs RLS perturbs
-  table(rownames(ge) %in% sv$symbol)
-  table(sv$symbol %in% rownames(ge))
-  sv<-sv %>% subset(symbol %in% rownames(ge))
-  ge<-ge[rownames(ge) %in% sv$symbol,]
-  X<-assay(ge,"logratio")[sv$symbol,] #sort order match
-} else {
-  #perturbed genes vs RLS perturbs
-  ge_perts<-colData(ge)$pert_geneSymbol
-  table(ge_perts %in% sv$symbol)
-  table(sv$symbol %in% ge_perts)
-  sv<-sv %>% subset(symbol %in% ge_perts)
-  ge<-ge[,ge_perts %in% sv$symbol]
-  rownames(ge)<-paste0("expr_",rownames(ge))
-  colnames(ge)<-colData(ge)$pert_geneSymbol
-  X<-t(assay(ge,"logratio")[,sv$symbol])
-}
-y<-sv$pro_longevity
+sv<-load_genage(sp)
+#ydb<-read.table("data/goterms_yeast.txt",header=TRUE,stringsAsFactors=FALSE)
+#X<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
+X<-load_goterms(sp)
+rownames(sv)<-sv$symbol
+gg<-intersect(rownames(sv),rownames(X))
+X<-as.matrix(X[gg,])
+y<-sv[gg,"pro_longevity"]
 names(y)<-rownames(X)
 
 # train/test split
@@ -80,11 +59,27 @@ if(pca){
   colnames(Xs)<-paste0("pca_",seq.int(500))
 } else {
   #random subset of columns or use PCA to reduce dims
-  nsample<-min(1000,ncol(X))
+  nsample<-min(1500,ncol(X))
   Xs<-X[,sample.int(ncol(X),nsample)]
 }
 Xtrn<-Xs[train_idx,]
 Xtst<-Xs[-train_idx,]
+```
+
+fixed prediction probability= probability of positive class
+
+```{r}
+probs<-rep(mean(ytrn==1),length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values))
+```
+
+fixed prediction probability= all major (negative) class
+
+```{r}
+probs<-rep(0,length(ytst))
+auc.tmp<-performance(prediction(probs,ytst),"auc")
+(auc<-as.numeric(auc.tmp@y.values)) 
 ```
 
 gradient boosted machines
@@ -95,44 +90,56 @@ print(res2)
 probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
-svm with caret, not working
+svm with caret
 ```{r}
 system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5),prob.model=TRUE))
 print(res3)
 probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
+plot(performance(preds, measure = "tpr", x.measure = "fpr"),main="SVM")
+abline(v=1-.803)
+abline(h=0.6)
 ```
 
 GLMnet prediction
 
 ```{r}
-pp<-preProcess(Xtrn,method=c("center","scale"))
-Xtrn<-cbind(1,predict(pp,Xtrn))
-Xtst<-cbind(1,predict(pp,Xtst))
+#pp<-preProcess(Xtrn,method=c("center","scale"))
+#Xtrn2<-cbind(1,predict(pp,Xtrn))
+#Xtst2<-cbind(1,predict(pp,Xtst))
+Xtrn2<-cbind(1,Xtrn)
+Xtst2<-cbind(1,Xtst)
 
 #folds<-createFolds(ytrn)
 #res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
-
+pca<-FALSE
 alpha<-if(pca){ 0.0 }else{ .9 }
-res<-cv.glmnet(Xtrn,ytrn,family="binomial",alpha=alpha)
-probs<-predict(res, newx=Xtst, s="lambda.min", type="response")
+res<-cv.glmnet(Xtrn2,ytrn,family="binomial",alpha=alpha)
+probs<-predict(res, newx=Xtst2, s="lambda.min", type="response")
 #saveRDS(res,file="glmnet_fit.rds")
 plot(res)
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.5
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
+naive bayes
+
 ```{r}
-rmse<-function(ytrue,ypred){
-  sqrt(mean((ytrue-ypred)^2))
-}
-(rmse_glmnet<-rmse(probs,ytst))
-(rmse_mean_only<-rmse(mean(ytrn),ytst))
+thresh<-5
+X3<-X[,colSums(X)>thresh]
+Xtrn3<-X3[train_idx,]
+Xtst3<-X3[-train_idx,]
+system.time(res<-train(Xtrn3,factor(ytrn), method="nb", preProcess=NULL, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))))
+print(res)
+probs<-predict(res,newdata=Xtst3,type="prob")[,"1"]
+preds<-prediction(probs,ytst)
+auc.tmp<-performance(preds,"auc")
+(auc<-as.numeric(auc.tmp@y.values))
 ```
 
