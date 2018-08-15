@@ -8,7 +8,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
-library(SummarizedExperiment)
+#library(SummarizedExperiment)
+library(SingleCellExperiment) #also loads SummarizedExperiment
 library(biomaRt)
 #mutants<-"all"
 mutants<-"responsive"
@@ -22,6 +23,7 @@ mutants<-"responsive"
 wget -P data https://genomics.senescence.info/genes/models_genes.zip
 unzip data/models_genes.zip -d data
 rm data/release.html
+rm data/models_genes.zip
 ```
 
 ```{r}
@@ -45,6 +47,29 @@ f<-function(org,verbose=TRUE){
 res<-do.call("rbind",lapply(names(org_match),f))
 table(res$species)/nrow(res) #fraction of entries from each species
 write.table(res,file="./data/goterms.txt",row.names=FALSE)
+```
+
+## Worm Cell Atlas
+
+Single cell RNA-Seq for worm larva. Documentation: http://atlas.gs.washington.edu/worm-rna/docs/
+
+```
+wget -P data http://waterston.gs.washington.edu/sci_RNA_seq_gene_count_data/Cao_et_al_2017_vignette.RData
+```
+
+```{r}
+x<-attach("./data/Cao_et_al_2017_vignette.RData")$cds
+umi<-exprs(cds)
+gm<-fData(cds)
+cm<-pData(cds)
+gg<-gm$num_cells_expressed>0
+gm<-gm[gg,]
+umi<-umi[gg,]
+rownames(gm)<-rownames(umi)<-toupper(gm$symbol)
+sce<-SingleCellExperiment(assays=list(umi=umi),rowData=gm,colData=cm)
+sizeFactors(sce)<-cm$Size_Factor
+sce<-scater::normalize(sce,exprs_values="umi", return_log=TRUE, log_exprs_offset=1, centre_size_factors=FALSE)
+saveRDS(sce,"./data/worm_scrna_atlas.rds")
 ```
 
 ## McCormick 2015 Replicative Lifespan

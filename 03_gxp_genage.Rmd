@@ -8,16 +8,19 @@ output: html_document
 Using gene expression alone to predict pro vs anti longevity genes from genage database.
 
 ```{r}
-library(SummarizedExperiment)
+library(SingleCellExperiment) #also loads SummarizedExperiment
 #library(dplyr)
 library(class)
 library(glmnet)
 library(caret)
 library(ROCR)
-library(e1071)
 source("util.R") #this loads dplyr too
-mutants<-"responsive"
-measured_genes<-TRUE
+spp<-c("yeast","worm")
+sp<-spp[2]
+if(sp=="yeast"){
+  mutants<-"responsive"
+  measured_genes<-TRUE
+}
 ```
 
 ## Data Loading
@@ -26,31 +29,43 @@ Merge Gene Expression and Survival Data
 Find genes that were measured in the deleteome across perturbations and also for which we have perturbation-survival data.
 
 ```{r}
-sv<-load_genage("yeast")
+sv<-load_genage(sp)
 
-if(mutants=="all"){
-  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-} else if(mutants=="responsive"){
-  ge<-readRDS("data/deleteome_responsive_mutants.rds")
-} else { stop("invalid mutant") }
-
-if(measured_genes==TRUE){
-  #expressed genes vs RLS perturbs
-  table(rownames(ge) %in% sv$symbol)
-  table(sv$symbol %in% rownames(ge))
-  sv<-sv %>% subset(symbol %in% rownames(ge))
-  ge<-ge[rownames(ge) %in% sv$symbol,]
-  X<-assay(ge,"logratio")[sv$symbol,] #sort order match
-} else {
-  #perturbed genes vs RLS perturbs
-  ge_perts<-colData(ge)$pert_geneSymbol
-  table(ge_perts %in% sv$symbol)
-  table(sv$symbol %in% ge_perts)
-  sv<-sv %>% subset(symbol %in% ge_perts)
-  ge<-ge[,ge_perts %in% sv$symbol]
-  rownames(ge)<-paste0("expr_",rownames(ge))
-  colnames(ge)<-colData(ge)$pert_geneSymbol
-  X<-t(assay(ge,"logratio")[,sv$symbol])
+if(sp=="yeast"){
+  if(mutants=="all"){
+    ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+  } else if(mutants=="responsive"){
+    ge<-readRDS("data/deleteome_responsive_mutants.rds")
+  } else { stop("invalid mutant") }
+  if(measured_genes==TRUE){
+    #expressed genes vs RLS perturbs
+    table(rownames(ge) %in% sv$symbol)
+    table(sv$symbol %in% rownames(ge))
+    sv<-sv %>% subset(symbol %in% rownames(ge))
+    ge<-ge[rownames(ge) %in% sv$symbol,]
+    X<-assay(ge,"logratio")[sv$symbol,] #sort order match
+  } else {
+    #perturbed genes vs RLS perturbs
+    ge_perts<-colData(ge)$pert_geneSymbol
+    table(ge_perts %in% sv$symbol)
+    table(sv$symbol %in% ge_perts)
+    sv<-sv %>% subset(symbol %in% ge_perts)
+    ge<-ge[,ge_perts %in% sv$symbol]
+    rownames(ge)<-paste0("expr_",rownames(ge))
+    colnames(ge)<-colData(ge)$pert_geneSymbol
+    X<-t(assay(ge,"logratio")[,sv$symbol])
+  }
+} else if(sp=="worm") {
+  sce<-readRDS("./data/worm_scrna_atlas.rds")
+  X<-assay(sce,"logcounts")
+  rownames(sv)<-sv$symbol
+  gg<-intersect(rownames(sv),rownames(X))
+  X<-as.matrix(X[gg,])
+  X<-X[,apply(X,2,sd)>0] #remove cells with no variation
+  #remove cells with fewer than 10 nonzero genes
+  X<-X[,colSums(X>0)>=10]
+  dim(X)
+  sv<-sv[gg,]
 }
 y<-sv$pro_longevity
 names(y)<-rownames(X)
@@ -59,6 +74,22 @@ names(y)<-rownames(X)
 train_idx<-createDataPartition(y,p=.75,list=FALSE)
 ytrn<-y[train_idx]
 ytst<-y[-train_idx]
+```
+
+dimensionality reduction
+
+```{r}
+pca<-TRUE
+if(pca){
+  Xs<-X %*% svd(X,nv=1000)$v #if PCA adjustment
+  colnames(Xs)<-paste0("pca_",seq.int(5000))
+} else {
+  #random subset of columns or use PCA to reduce dims
+  nsample<-min(1000,ncol(X))
+  Xs<-X[,sample.int(ncol(X),nsample)]
+}
+Xtrn<-Xs[train_idx,]
+Xtst<-Xs[-train_idx,]
 ```
 
 knn classifier
@@ -74,22 +105,6 @@ auc.tmp<-performance(preds,"auc")
 (auc<-as.numeric(auc.tmp@y.values)) #0.6
 ```
 
-regression-type models
-
-```{r}
-pca<-FALSE
-if(pca){
-  Xs<-X %*% svd(X,nu=500,nv=500)$v #if PCA adjustment
-  colnames(Xs)<-paste0("pca_",seq.int(500))
-} else {
-  #random subset of columns or use PCA to reduce dims
-  nsample<-min(1000,ncol(X))
-  Xs<-X[,sample.int(ncol(X),nsample)]
-}
-Xtrn<-Xs[train_idx,]
-Xtst<-Xs[-train_idx,]
-```
-
 gradient boosted machines
 
 ```{r}
@@ -101,7 +116,7 @@ auc.tmp<-performance(preds,"auc")
 (auc<-as.numeric(auc.tmp@y.values)) #0.6
 ```
 
-svm with caret, not working
+svm with caret
 ```{r}
 system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5),prob.model=TRUE))
 print(res3)
