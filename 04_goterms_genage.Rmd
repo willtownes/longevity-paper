@@ -6,14 +6,13 @@ output: html_document
 ---
 
 ```{r}
-library(SummarizedExperiment)
 library(class)
 library(glmnet)
 library(caret)
 library(ROCR)
 source("./util.R")
 spp<-c("yeast","worm","fly","mouse")
-sp<-spp[2]
+sp<-spp[4]
 ```
 
 ## Data Loading
@@ -28,6 +27,9 @@ X<-load_goterms(sp)
 rownames(sv)<-sv$symbol
 gg<-intersect(rownames(sv),rownames(X))
 X<-as.matrix(X[gg,])
+mode(X)<-"integer"
+X<-X[,apply(X,2,sd)>0] #remove features with no variation
+dim(X)
 y<-sv[gg,"pro_longevity"]
 names(y)<-rownames(X)
 
@@ -59,7 +61,7 @@ if(pca){
   colnames(Xs)<-paste0("pca_",seq.int(500))
 } else {
   #random subset of columns or use PCA to reduce dims
-  nsample<-min(1500,ncol(X))
+  nsample<-min(3000,ncol(X))
   Xs<-X[,sample.int(ncol(X),nsample)]
 }
 Xtrn<-Xs[train_idx,]
