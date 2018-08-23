@@ -72,6 +72,17 @@ sce<-scater::normalize(sce,exprs_values="umi", return_log=TRUE, log_exprs_offset
 saveRDS(sce,"./data/worm_scrna_atlas.rds")
 ```
 
+## ARCHS4
+
+```
+wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Caenorhabditis_elegans_genecount_v1.h5
+wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Saccharomyces_cerevisiae_genecount_v1.h5
+```
+
+```{r}
+
+```
+
 ## McCormick 2015 Replicative Lifespan
 
 Useful functions, mostly for McCormick data
