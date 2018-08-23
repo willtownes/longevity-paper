@@ -7,10 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(rhdf5) #from bioconductor
 library(dplyr)
-#library(SummarizedExperiment)
 library(SingleCellExperiment) #also loads SummarizedExperiment
 library(biomaRt)
+library(Matrix)
 #mutants<-"all"
 mutants<-"responsive"
 ```
@@ -58,18 +59,35 @@ wget -P data http://waterston.gs.washington.edu/sci_RNA_seq_gene_count_data/Cao_
 ```
 
 ```{r}
-x<-attach("./data/Cao_et_al_2017_vignette.RData")$cds
+cds<-attach("./data/Cao_et_al_2017_vignette.RData")$cds
 umi<-exprs(cds)
 gm<-fData(cds)
 cm<-pData(cds)
+gc<-!is.na(cm$tissue) & !is.na(cm$cell.type) & cm$tissue != "Failed QC"
+cm<-cm[gc,]
+cm$tissue<-factor(cm$tissue)
+cm$cell.type<-factor(cm$cell.type)
+umi<-umi[,gc]
 gg<-gm$num_cells_expressed>0
 gm<-gm[gg,]
 umi<-umi[gg,]
 rownames(gm)<-rownames(umi)<-toupper(gm$symbol)
-sce<-SingleCellExperiment(assays=list(umi=umi),rowData=gm,colData=cm)
-sizeFactors(sce)<-cm$Size_Factor
-sce<-scater::normalize(sce,exprs_values="umi", return_log=TRUE, log_exprs_offset=1, centre_size_factors=FALSE)
+rab<-t(t(umi)/colSums(umi))
+sce<-SingleCellExperiment(assays=list(umi_counts=umi,relative_abundance=rab),rowData=gm,colData=cm)
+#sizeFactors(sce)<-cm$Size_Factor
+#sce<-scater::normalize(sce,exprs_values="umi", return_log=TRUE, log_exprs_offset=1, centre_size_factors=FALSE)
 saveRDS(sce,"./data/worm_scrna_atlas.rds")
+#sce<-readRDS("./data/worm_scrna_atlas.rds")
+rab<-assay(sce,"relative_abundance")
+cm<-colData(sce)
+cm2<-data.frame(celltype=cm$cell.type,plate=cm$plate)
+cm2$grp<-factor(paste0(cm2$celltype,"_p",cm2$plate))
+f<-function(g){
+  x<-as.matrix(rab[,cm2$grp==g])
+  drop(rowMeans(x))
+}
+rab2<-vapply(levels(cm2$grp),f,FUN.VALUE=rep(0,nrow(rab)))
+write.table(rab2,"./data/worm_scrna_atlas_merged_rel_abund.txt")
 ```
 
 ## ARCHS4
