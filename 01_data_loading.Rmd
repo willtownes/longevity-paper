@@ -37,15 +37,16 @@ d1 <- d %>% subset(organism=="Saccharomyces cerevisiae" & longevity.influence %i
 ## GO terms
 
 ```{r}
-org_match<-list(yeast="scerevisiae",worm="celegans",fly="dmelanogaster",mouse="mmusculus")
 #spp<-c("scerevisiae","celegans","dmelanogaster","mmusculus")
 f<-function(org,verbose=TRUE){
   if(verbose){ print(paste("species:",org)) }
+  org_match<-list(yeast="scerevisiae",worm="celegans",fly="dmelanogaster",mouse="mmusculus")
   x<-useMart("ensembl",dataset=paste0(org_match[[org]],"_gene_ensembl"))
   x<-getBM(c("external_gene_name","go_id"),mart=x)
   x$species<-org
   x
 }
+
 res<-do.call("rbind",lapply(names(org_match),f))
 table(res$species)/nrow(res) #fraction of entries from each species
 write.table(res,file="./data/goterms.txt",row.names=FALSE)
@@ -96,22 +97,39 @@ write.table(rab2,"./data/worm_scrna_atlas_merged_rel_abund.txt")
 ```
 wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Caenorhabditis_elegans_genecount_v1.h5
 wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Saccharomyces_cerevisiae_genecount_v1.h5
+wget -P data https://s3.amazonaws.com/mssm-seq-genemapping/Caenorhabditis_elegans_mapping.rda
 ```
 
 ```{r}
-org_match<-list(yeast="Saccharomyces cerevisiae",
+get_gene_info<-function(g,org=c("worm","yeast"),verbose=TRUE){
+  #g is a character vector of gene IDs from ARCHS4
+  #this function maps IDS to gene symbols (compatible with genage)
+  #also includes gene length in the returned data frame
+  org<-match.arg(org)
+  if(verbose){ print(paste("species:",org)) }
+  org_match<-list(yeast=c("scerevisiae","ensembl_gene_id"),worm=c("celegans","wormbase_gene"))
+  #,fly="dmelanogaster",mouse="mmusculus")
+  x<-useMart("ensembl",dataset=paste0(org_match[[org]][1],"_gene_ensembl"))
+  gname<-org_match[[org]][2] #eg, "wormbase_gene"
+  z<-getBM(c(gname,"external_gene_name","start_position","end_position"),filters=gname,values=g,mart=x)
+  z$length<-z$end_position-z$start_position
+  z$external_gene_name<-toupper(z$external_gene_name)
+  z
+}
+
+load_archs4<-function(species=c("worm","yeast"),dir="./data",v="v1"){
+  org_match<-list(yeast="Saccharomyces cerevisiae",
                 worm="Caenorhabditis elegans",
                 fly="Drosophila melanogaster",
                 mouse="Mus musculus")
-load_archs4<-function(species=c("worm","yeast"),dir="./data",v="v1"){
   sp<-org_match[[match.arg(species)]] #eg "Caenorhabditis elegans"
   fn<-paste(c(unlist(strsplit(sp," ")),"genecount",v),collapse="_")
   hdf5path<-file.path(dir,paste0(fn,".h5"))
   d<-h5read(hdf5path,"data/expression")
   m<-h5read(hdf5path,"meta")
   i<-h5read(hdf5path,"info")
-  cnames<-names(m)
-  cmeta<-do.call(cbind,m[cnames!="genes"])
+  cmeta<-do.call(cbind,m[names(m)!="genes"])
+  g<-as.character(m[["genes"]])
   rownames(d)<-toupper(as.character(m[["genes"]]))
   SummarizedExperiment(list(counts=d),colData=cmeta,metadata=i)
 }
