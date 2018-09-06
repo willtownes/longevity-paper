@@ -16,11 +16,12 @@ library(caret)
 library(ROCR)
 source("util.R") #this loads dplyr too
 spp<-c("yeast","worm")
-sp<-spp[1]
+sp<-spp[2]
 if(sp=="yeast"){
   mutants<-"responsive"
   measured_genes<-TRUE
 }
+archs4<-TRUE
 ```
 
 ## Data Loading
@@ -30,57 +31,60 @@ Find genes that were measured in the deleteome across perturbations and also for
 
 ```{r}
 sv<-load_genage(sp)
-
-if(sp=="yeast"){
-  se<-readRDS("./data/archs4yeast.rds")
+if(archs4){
+  se<-readRDS(paste0("./data/archs4",sp,".rds"))
+  gm<-rowData(se)
   X<-assay(se,"counts")
-  X<-log2(1+t(1e6*t(X)/colSums(X))) #normalize and log-transform
+  X<-X/gm$length
+  X<-t(t(X)/colSums(X)*1e6)
+  X<-log2(1+X) #normalize and log-transform
   rownames(sv)<-sv$symbol
   gg<-intersect(rownames(sv),rownames(X))
   X<-as.matrix(X[gg,])
   X<-X[,apply(X,2,sd)>0] #remove cells with no variation
-  #remove cells with fewer than 10 nonzero genes
+  #remove samples with fewer than 10 nonzero genes
   X<-X[,colSums(X>0)>=10]
   dim(X)
   sv<-sv[gg,]
-  # if(mutants=="all"){
-  #   ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-  # } else if(mutants=="responsive"){
-  #   ge<-readRDS("data/deleteome_responsive_mutants.rds")
-  # } else { stop("invalid mutant") }
-  # if(measured_genes==TRUE){
-  #   #expressed genes vs RLS perturbs
-  #   table(rownames(ge) %in% sv$symbol)
-  #   table(sv$symbol %in% rownames(ge))
-  #   sv<-sv %>% subset(symbol %in% rownames(ge))
-  #   ge<-ge[rownames(ge) %in% sv$symbol,]
-  #   X<-assay(ge,"logratio")[sv$symbol,] #sort order match
-  # } else {
-  #   #perturbed genes vs RLS perturbs
-  #   ge_perts<-colData(ge)$pert_geneSymbol
-  #   table(ge_perts %in% sv$symbol)
-  #   table(sv$symbol %in% ge_perts)
-  #   sv<-sv %>% subset(symbol %in% ge_perts)
-  #   ge<-ge[,ge_perts %in% sv$symbol]
-  #   rownames(ge)<-paste0("expr_",rownames(ge))
-  #   colnames(ge)<-colData(ge)$pert_geneSymbol
-  #   X<-t(assay(ge,"logratio")[,sv$symbol])
-  # }
-} else if(sp=="worm") {
-  #sce<-readRDS("./data/worm_scrna_atlas.rds")
-  #X<-assay(sce,"logcounts")
-  #X<-read.table("./data/worm_scrna_atlas_merged_rel_abund.txt")
-  se<-readRDS("./data/archs4worm.rds")
-  X<-assay(se,"counts")
-  X<-log2(1+t(1e6*t(X)/colSums(X))) #normalize and log-transform
-  rownames(sv)<-sv$symbol
-  gg<-intersect(rownames(sv),rownames(X))
-  X<-as.matrix(X[gg,])
-  X<-X[,apply(X,2,sd)>0] #remove cells with no variation
-  #remove cells with fewer than 10 nonzero genes
-  X<-X[,colSums(X>0)>=10]
-  dim(X)
-  sv<-sv[gg,]
+} else {
+  if(sp=="yeast"){
+    if(mutants=="all"){
+      ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+    } else if(mutants=="responsive"){
+      ge<-readRDS("data/deleteome_responsive_mutants.rds")
+    } else { stop("invalid mutant") }
+    if(measured_genes==TRUE){
+      #expressed genes vs RLS perturbs
+      table(rownames(ge) %in% sv$symbol)
+      table(sv$symbol %in% rownames(ge))
+      sv<-sv %>% subset(symbol %in% rownames(ge))
+      ge<-ge[rownames(ge) %in% sv$symbol,]
+      X<-assay(ge,"logratio")[sv$symbol,] #sort order match
+    } else {
+      #perturbed genes vs RLS perturbs
+      ge_perts<-colData(ge)$pert_geneSymbol
+      table(ge_perts %in% sv$symbol)
+      table(sv$symbol %in% ge_perts)
+      sv<-sv %>% subset(symbol %in% ge_perts)
+      ge<-ge[,ge_perts %in% sv$symbol]
+      rownames(ge)<-paste0("expr_",rownames(ge))
+      colnames(ge)<-colData(ge)$pert_geneSymbol
+      X<-t(assay(ge,"logratio")[,sv$symbol])
+    }
+  } else if(sp=="worm") {
+    #sce<-readRDS("./data/worm_scrna_atlas.rds")
+    #X<-assay(sce,"logcounts")
+    X<-read.table("./data/worm_scrna_atlas_merged_rel_abund.txt")
+    X<-log2(1+t(1e6*t(X)/colSums(X))) #normalize and log-transform
+    rownames(sv)<-sv$symbol
+    gg<-intersect(rownames(sv),rownames(X))
+    X<-as.matrix(X[gg,])
+    X<-X[,apply(X,2,sd)>0] #remove cells with no variation
+    #remove cells with fewer than 10 nonzero genes
+    X<-X[,colSums(X>0)>=10]
+    dim(X)
+    sv<-sv[gg,]
+  }
 }
 y<-sv$pro_longevity
 names(y)<-rownames(X)
@@ -94,7 +98,7 @@ ytst<-y[-train_idx]
 dimensionality reduction
 
 ```{r}
-pca<-TRUE
+pca<-FALSE
 if(pca){
   Xs<-X %*% svd(X,nv=1000)$v #if PCA adjustment
   colnames(Xs)<-paste0("pca_",seq.int(5000))

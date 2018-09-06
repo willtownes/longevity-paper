@@ -7,12 +7,11 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(rhdf5) #from bioconductor
+#library(rhdf5) #from bioconductor
 library(dplyr)
 library(SingleCellExperiment) #also loads SummarizedExperiment
 library(biomaRt)
 library(Matrix)
-library(rhdf5)
 #mutants<-"all"
 mutants<-"responsive"
 ```
@@ -97,7 +96,6 @@ write.table(rab2,"./data/worm_scrna_atlas_merged_rel_abund.txt")
 ```
 wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Caenorhabditis_elegans_genecount_v1.h5
 wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Saccharomyces_cerevisiae_genecount_v1.h5
-wget -P data https://s3.amazonaws.com/mssm-seq-genemapping/Caenorhabditis_elegans_mapping.rda
 ```
 
 ```{r}
@@ -107,7 +105,8 @@ get_gene_info<-function(g,org=c("worm","yeast"),verbose=TRUE){
   #also includes gene length in the returned data frame
   org<-match.arg(org)
   if(verbose){ print(paste("species:",org)) }
-  org_match<-list(yeast=c("scerevisiae","ensembl_gene_id"),worm=c("celegans","wormbase_gene"))
+  org_match<-list(yeast=c("scerevisiae","ensembl_gene_id"),
+                  worm=c("celegans","wormbase_gene"))
   #,fly="dmelanogaster",mouse="mmusculus")
   x<-useMart("ensembl",dataset=paste0(org_match[[org]][1],"_gene_ensembl"))
   gname<-org_match[[org]][2] #eg, "wormbase_gene"
@@ -118,20 +117,26 @@ get_gene_info<-function(g,org=c("worm","yeast"),verbose=TRUE){
 }
 
 load_archs4<-function(species=c("worm","yeast"),dir="./data",v="v1"){
-  org_match<-list(yeast="Saccharomyces cerevisiae",
-                worm="Caenorhabditis elegans",
-                fly="Drosophila melanogaster",
-                mouse="Mus musculus")
+  org_match<-list(yeast="Saccharomyces cerevisiae",worm="Caenorhabditis elegans")
+                #,fly="Drosophila melanogaster",mouse="Mus musculus")
   sp<-org_match[[match.arg(species)]] #eg "Caenorhabditis elegans"
   fn<-paste(c(unlist(strsplit(sp," ")),"genecount",v),collapse="_")
   hdf5path<-file.path(dir,paste0(fn,".h5"))
-  d<-h5read(hdf5path,"data/expression")
-  m<-h5read(hdf5path,"meta")
-  i<-h5read(hdf5path,"info")
-  cmeta<-do.call(cbind,m[names(m)!="genes"])
+  d<-rhdf5::h5read(hdf5path,"data/expression")
+  m<-rhdf5::h5read(hdf5path,"meta")
+  i<-rhdf5::h5read(hdf5path,"info")
+  cmeta<-as.data.frame(do.call(cbind,m[names(m)!="genes"]))
+  colnames(d)<-cmeta$Sample_geo_accession
   g<-as.character(m[["genes"]])
-  rownames(d)<-toupper(as.character(m[["genes"]]))
-  SummarizedExperiment(list(counts=d),colData=cmeta,metadata=i)
+  rownames(d)<-g
+  gmeta<-get_gene_info(g,species,verbose=FALSE)
+  gmeta[,c("start_position","end_position")]<-NULL
+  d<-d[gmeta[,1],]
+  gg<-gmeta$external_gene_name!="" & !duplicated(gmeta$external_gene_name)
+  gmeta<-gmeta[gg,]
+  d<-d[gg,]
+  rownames(d)<-rownames(gmeta)<-gmeta$external_gene_name
+  SummarizedExperiment(list(counts=d),colData=cmeta,metadata=i,rowData=gmeta)
 }
 for(org in c("yeast","worm")){
   se<-load_archs4(org)
