@@ -12,6 +12,7 @@ library(dplyr)
 library(SingleCellExperiment) #also loads SummarizedExperiment
 library(biomaRt)
 library(Matrix)
+library(rhdf5)
 #mutants<-"all"
 mutants<-"responsive"
 ```
@@ -98,7 +99,26 @@ wget -P data https://s3.amazonaws.com/mssm-archs4-zoo/Saccharomyces_cerevisiae_g
 ```
 
 ```{r}
-
+org_match<-list(yeast="Saccharomyces cerevisiae",
+                worm="Caenorhabditis elegans",
+                fly="Drosophila melanogaster",
+                mouse="Mus musculus")
+load_archs4<-function(species=c("worm","yeast"),dir="./data",v="v1"){
+  sp<-org_match[[match.arg(species)]] #eg "Caenorhabditis elegans"
+  fn<-paste(c(unlist(strsplit(sp," ")),"genecount",v),collapse="_")
+  hdf5path<-file.path(dir,paste0(fn,".h5"))
+  d<-h5read(hdf5path,"data/expression")
+  m<-h5read(hdf5path,"meta")
+  i<-h5read(hdf5path,"info")
+  cnames<-names(m)
+  cmeta<-do.call(cbind,m[cnames!="genes"])
+  rownames(d)<-toupper(as.character(m[["genes"]]))
+  SummarizedExperiment(list(counts=d),colData=cmeta,metadata=i)
+}
+for(org in c("yeast","worm")){
+  se<-load_archs4(org)
+  saveRDS(se,file.path("./data",paste0("archs4",org,".rds")))
+}
 ```
 
 ## McCormick 2015 Replicative Lifespan

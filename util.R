@@ -2,13 +2,14 @@
 library(dplyr)
 library(Matrix)
 
+org_match<-list(yeast="Saccharomyces cerevisiae",
+                worm="Caenorhabditis elegans",
+                fly="Drosophila melanogaster",
+                mouse="Mus musculus")
+
 load_genage<-function(species=c("yeast","worm","fly","mouse"),fpath="./data/genage_models.csv"){
   d<-read.csv(fpath)
   species<-match.arg(species)
-  org_match<-list(yeast="Saccharomyces cerevisiae",
-                  worm="Caenorhabditis elegans",
-                  fly="Drosophila melanogaster",
-                  mouse="Mus musculus")
   org<-org_match[[species]]
   res<-d %>% subset(organism==org & longevity.influence %in% c("Pro-Longevity","Anti-Longevity")) %>% transform(symbol=toupper(symbol)) %>% mutate(pro_longevity=as.numeric(longevity.influence=="Pro-Longevity")) %>% select(symbol,pro_longevity)
   res<-res %>% group_by(symbol) %>% summarise(pro_longevity=round(mean(pro_longevity))) #removes duplicates by averaging them
