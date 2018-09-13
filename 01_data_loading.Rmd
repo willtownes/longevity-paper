@@ -79,16 +79,16 @@ sce<-SingleCellExperiment(assays=list(umi_counts=umi,relative_abundance=rab),row
 #sce<-scater::normalize(sce,exprs_values="umi", return_log=TRUE, log_exprs_offset=1, centre_size_factors=FALSE)
 saveRDS(sce,"./data/worm_scrna_atlas.rds")
 #sce<-readRDS("./data/worm_scrna_atlas.rds")
-rab<-assay(sce,"relative_abundance")
+umi<-assay(sce,"umi_counts")
 cm<-colData(sce)
 cm2<-data.frame(celltype=cm$cell.type,plate=cm$plate)
 cm2$grp<-factor(paste0(cm2$celltype,"_p",cm2$plate))
 f<-function(g){
-  x<-as.matrix(rab[,cm2$grp==g])
-  drop(rowMeans(x))
+  x<-as.matrix(umi[,cm2$grp==g])
+  drop(rowSums(x))
 }
-rab2<-vapply(levels(cm2$grp),f,FUN.VALUE=rep(0,nrow(rab)))
-write.table(rab2,"./data/worm_scrna_atlas_merged_rel_abund.txt")
+umi2<-vapply(levels(cm2$grp),f,FUN.VALUE=rep(0,nrow(umi)))
+write.table(umi2,"./data/worm_scrna_atlas_merged_umi.txt")
 ```
 
 ## ARCHS4

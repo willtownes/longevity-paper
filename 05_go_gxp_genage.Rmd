@@ -7,15 +7,18 @@ output: html_document
 
 ```{r}
 library(SummarizedExperiment)
-#library(dplyr)
-#library(tidyr)
-#library(reshape2)
 library(class)
 library(glmnet)
 library(caret)
 library(ROCR)
-mutants<-"responsive"
-#only works for measured genes not yet for perturbed genes
+source("util.R") #this loads dplyr too
+spp<-c("yeast","worm")
+sp<-spp[1]
+if(sp=="yeast"){
+  mutants<-"responsive"
+  measured_genes<-TRUE
+}
+archs4<-TRUE
 ```
 
 ## Data Loading
@@ -23,31 +26,46 @@ mutants<-"responsive"
 Merge GO terms, gene expression, and survival Data
 
 ```{r}
-sv<-read.table("data/genage_yeast.txt",header=TRUE,stringsAsFactors = FALSE)
-ydb<-read.table("data/goterms_yeast.txt",header=TRUE,stringsAsFactors=FALSE)
-#ydb<-subset(ydb,external_gene_name %in% sv$symbol)
-X<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
-
-if(mutants=="all"){
-  ge<-readRDS("data/deleteome_all_mutants_controls.rds")
-} else if(mutants=="responsive"){
-  ge<-readRDS("data/deleteome_responsive_mutants.rds")
-} else { stop("invalid mutant") }
-
-#expressed genes vs RLS perturbs
-sv$symbol<-toupper(sv$symbol)
-rownames(X)<-toupper(rownames(X))
-rownames(ge)<-toupper(rownames(ge))
-rownames(sv)<-sv$symbol
-gid<-intersect(sv$symbol,rownames(X))
-gid<-sort(intersect(gid,rownames(ge)))
-y<-sv[gid,"pro_longevity"]
-X<-cbind(X[gid,],assay(ge,"logratio")[gid,])
-X<-X[,apply(X,2,sd)>0] #remove features with no variation
+normalize_func<-function(X){
+  #X either a counts matrix or counts scaled by gene length
+  log2(1+t(1e6*t(X)/colSums(X)))
+}
+sv<-load_genage(sp)
+rownames(sv)<-toupper(sv$symbol)
+Xgo<-load_goterms(sp)
+if(archs4){
+  se<-readRDS(paste0("./data/archs4",sp,".rds"))
+  X<-normalize_func(assay(se,"counts")/rowData(se)$length)
+} else {
+  if(sp=="yeast"){
+    if(mutants=="all"){
+      ge<-readRDS("data/deleteome_all_mutants_controls.rds")
+    } else if(mutants=="responsive"){
+      ge<-readRDS("data/deleteome_responsive_mutants.rds")
+    } else { stop("invalid mutant") }
+    if(measured_genes==TRUE){
+      X<-assay(ge,"logratio")#[sv$symbol,] #sort order match
+    } else {
+      rownames(ge)<-paste0("expr_",rownames(ge))
+      colnames(ge)<-colData(ge)$pert_geneSymbol
+      X<-t(assay(ge,"logratio"))#[,sv$symbol])
+    }
+  } else if(sp=="worm") {
+    X<-read.table("./data/worm_scrna_atlas_merged_umi.txt")
+    X<-normalize_func(X)
+  }
+}
+gg<-intersect(rownames(Xgo),intersect(rownames(sv),rownames(X)))
+X<-cbind(as.matrix(X[gg,]),Xgo[gg,])
+X<-X[,apply(X,2,sd)>0] #remove cells with no variation
+#remove samples with fewer than 10 nonzero genes
+X<-X[,colSums(X>0)>=10]
+dim(X)
+sv<-sv[gg,]
+y<-sv$pro_longevity
 names(y)<-rownames(X)
-
 # train/test split
-train_idx<-createDataPartition(y,p=.75,list=FALSE)
+train_idx<-drop(createDataPartition(y,p=.75,list=FALSE))
 ytrn<-y[train_idx]
 ytst<-y[-train_idx]
 ```
