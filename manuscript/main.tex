@@ -1,10 +1,5 @@
 \documentclass{article}
-\usepackage{graphicx}
-\usepackage{amsmath}
-\usepackage{amssymb}
 \usepackage{authblk}
-\usepackage{fancyhdr}
-\pagestyle{fancy}
 \begin{document}
 % Title of paper
 \title{Prediction of Aging by Gene Expression}
@@ -16,7 +11,6 @@
 % E-mail address for correspondence
 \normalsize {ftownes@g.harvard.edu, jwmiller@hsph.harvard.edu}
 }
-
 \maketitle
 
 \newpage
@@ -25,8 +19,13 @@ Return
 \end{abstract}
 
 \section{Introduction}
+Identifying the genetic and molecular basis for aging is a long standing goal in medical science. Many studies have investigated whether individual genes are pro-aging or anti-aging on a case by case basis. Typically, a direct intervention such as a knockout or chemical perturbation is applied to a small number of genes in a model organism such as yeast or C. elegans followed by quantification of lifespan. These experiments are capable of identifying causal relationships, but are slow and expensive. In order to prioritize which genes to examine next and speed up the process, recent studies have used annotations like the Gene Ontology (GO) to computationally predict the effect of any gene on aging. A recent survey of such efforts is provided by \cite{fabris_review_2017}. Recent studies suffer from several limitations. First, annotations like GO may be biased by the scope of the existing literature. Second, there is no consistency between studies in algorithms, feature sets, or predictive outcome, making it difficult to compare results. Finally, most recent studies do not report a predictive score on a held-out test dataset, leading to overestimating the performance of the algorithms.
 
+We address these gaps in the computational aging literature by systematically assessing the performance of common machine learning algorithms on predicting pro- versus anti- aging status of genes in yeast and C. elegans. We compare the efficacy of GO terms as predictors against gene expression profiles from the ARCHS4 database. We use a consistent target outcome in all comparisons, drawn from the GenAge database. Finally, we provide predictions for top candidate genes that were not annotated in GenAge to suggest directions for future experimental studies.
 
+\section{Methods}
+
+\bibliographystyle{plain}
 \bibliography{ade}
 
 \end{document}
