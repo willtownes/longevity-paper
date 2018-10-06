@@ -23,8 +23,13 @@ fts<-features[1]
 
 ```{r}
 dat<-readRDS(paste0("./data/auto/",sp,".rds"))
-ytrn<-dat$y[dat$train_idx]
-ytst<-dat$y[-dat$train_idx]
+y<-rep("anti",length(dat$y))
+y[dat$y==1]<-"pro"
+y<-factor(y)
+#ytrn<-dat$y[dat$train_idx]
+#ytst<-dat$y[-dat$train_idx]
+ytrn<-y[dat$train_idx]
+ytst<-y[-dat$train_idx]
 X<-dat[[fts]]
 Xtrn<-X[dat$train_idx,]
 Xtst<-X[-dat$train_idx,]
@@ -39,6 +44,15 @@ probs[fit==0]<-1-probs[fit==0]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
 (auc<-as.numeric(auc.tmp@y.values)) #0.6
+
+#knn via caret
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5,classProbs=TRUE), method="kknn",tuneGrid=data.frame(kmax=c(5,10,15),distance=2,kernel="optimal")))
+print(fit)
+p1<-prediction(predict(fit,type="prob")[,2], ytrn)
+p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
+(auc<-performance(p2,"auc")@y.values[[1]])
+plot(performance(p1,"tpr","fpr"),lty=2)
+plot(performance(p2,"tpr","fpr"),add=TRUE)
 ```
 
 xgboost
