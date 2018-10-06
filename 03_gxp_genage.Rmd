@@ -97,28 +97,9 @@ roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 GLMnet prediction
 
 ```{r}
-pp<-preProcess(Xtrn,method=c("center","scale"))
-Xtrn<-cbind(1,predict(pp,Xtrn))
-Xtst<-cbind(1,predict(pp,Xtst))
-
-#folds<-createFolds(ytrn)
-#res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
-
-alpha<-if(pca){ 0.0 }else{ .9 }
-res<-cv.glmnet(Xtrn,ytrn,family="binomial",alpha=alpha)
-probs<-predict(res, newx=Xtst, s="lambda.min", type="response")
-#saveRDS(res,file="glmnet_fit.rds")
-plot(res)
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.5
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="glmnet", family="binomial"))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
-
-```{r}
-rmse<-function(ytrue,ypred){
-  sqrt(mean((ytrue-ypred)^2))
-}
-(rmse_glmnet<-rmse(probs,ytst))
-(rmse_mean_only<-rmse(mean(ytrn),ytst))
-```
-
