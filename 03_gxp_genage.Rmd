@@ -8,15 +8,32 @@ output: html_document
 Using gene expression alone to predict pro vs anti longevity genes from genage database.
 
 ```{r}
-library(class)
 library(caret)
+library(ROCR)
+library(class)
 library(glmnet)
 library(xgboost)
-library(ROCR)
+library(doParallel)
+registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
 spp<-c("yeast","worm")
 sp<-spp[2]
 features<-c("archs4","other1")
 fts<-features[1]
+```
+
+```{r}
+#for any caret model, extract the true and false positive rates that can be used to make ROC
+caret_roc<-function(fit,Xtst,ytst,ytrn){
+  p1<-prediction(predict(fit,type="prob")[,2], ytrn)
+  p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
+  p1<-performance(p1,"tpr","fpr")
+  p2<-performance(p2,"tpr","fpr")
+  d1<-data.frame(tpr=p1@y.values[[1]],fpr=p1@x.values[[1]],fold="train")
+  d2<-data.frame(tpr=p2@y.values[[1]],fpr=p2@x.values[[1]],fold="test")
+  rbind(d1,d2)
+}
+
+roc2auc<-function(fpr,tpr){ sum(tpr[-1]*diff(fpr)) }
 ```
 
 ## Data Loading
@@ -43,83 +60,34 @@ probs<-attr(fit,"prob")
 probs[fit=="anti"]<-1-probs[fit=="anti"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+(auc<-as.numeric(auc.tmp@y.values))
+
+fit<-kknn(y~.,data.frame(y=ytrn,Xtrn),data.frame(y=ytst,Xtst),k=20)
+probs<-predict(fit,type="prob")[,2]
+performance(prediction(probs,ytst),"auc")
 
 #knn via caret
-system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn", tuneGrid=expand.grid(kmax=c(5,10,15),distance=c(1,2),kernel="optimal")))
-#classProbs=TRUE)
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn"))
+#tuneGrid=expand.grid(kmax=c(5,10,15),distance=c(1,2),kernel="optimal")
 print(fit)
-p1<-prediction(predict(fit,type="prob")[,2], ytrn)
-p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
-(auc<-performance(p2,"auc")@y.values[[1]])
-plot(performance(p1,"tpr","fpr"),lty=2)
-plot(performance(p2,"tpr","fpr"),add=TRUE)
-abline(0,1,lty=3)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
 xgboost
 
 ```{r}
-# set up the cross-validated hyper-parameter search
-xgb_grid_1 = expand.grid(
-  nrounds = 50,
-  max_depth = c(2, 4),
-  eta = c(0.1, 0.01),
-  gamma = 1,
-  colsample_bytree=1,
-  min_child_weight=1,
-  subsample=1
-)
-
-# pack the training control parameters
-xgb_trcontrol_1 = trainControl(
-  method = "cv",
-  number = 3,
-  verboseIter = TRUE,
-  returnData = FALSE,
-  returnResamp = "all",                                     
-  classProbs = TRUE,
-  summaryFunction = twoClassSummary,
-  allowParallel = TRUE
-)
-
-fit = train(
-  Xtrn,
-  y = factor(paste0("pro",ytrn)),
-  trControl = xgb_trcontrol_1,
-  tuneGrid = xgb_grid_1,
-  method = "xgbTree",
-  metric="Kappa"
-)
-
-
-#xgb_pars<-list(objective="binary:logistic",eta=.3,max_depth=6,nthread=2)
-#fit<-xgb.cv(xgb_pars, Xtrn, nrounds=10, nfold=5, label=ytrn)
-probs<-predict(fit,Xtst,type="prob")[,"pro1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
-```
-
-gradient boosted machines
-
-```{r}
-system.time(res2<-train(Xtrn,factor(ytrn), method="gbm", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(interaction.depth=c(1,2),n.trees=c(800,1600),shrinkage=.005,n.minobsinnode=10)))
-print(res2)
-probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="xgbTree"))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
 svm with caret
 ```{r}
-system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5),prob.model=TRUE))
-print(res3)
-probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="svmRadial"))
 ```
 
 GLMnet prediction
