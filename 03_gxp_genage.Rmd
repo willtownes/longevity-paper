@@ -43,8 +43,6 @@ dat<-readRDS(paste0("./data/auto/",sp,".rds"))
 y<-rep("anti",length(dat$y))
 y[dat$y==1]<-"pro"
 y<-factor(y)
-#ytrn<-dat$y[dat$train_idx]
-#ytst<-dat$y[-dat$train_idx]
 ytrn<-y[dat$train_idx]
 ytst<-y[-dat$train_idx]
 X<-dat[[fts]]
@@ -67,7 +65,7 @@ probs<-predict(fit,type="prob")[,2]
 performance(prediction(probs,ytst),"auc")
 
 #knn via caret
-system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn"))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn"))
 #tuneGrid=expand.grid(kmax=c(5,10,15),distance=c(1,2),kernel="optimal")
 print(fit)
 perf<-caret_roc(fit,Xtst,ytst,ytrn)
@@ -78,7 +76,7 @@ roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 xgboost
 
 ```{r}
-system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="xgbTree"))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="xgbTree"))
 print(fit)
 perf<-caret_roc(fit,Xtst,ytst,ytrn)
 ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
@@ -87,7 +85,7 @@ roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 
 svm with caret
 ```{r}
-system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="svmRadial",prob.model=TRUE,tuneLength=5))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="svmRadialSigma", prob.model=TRUE))
 print(fit)
 perf<-caret_roc(fit,Xtst,ytst,ytrn)
 ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
