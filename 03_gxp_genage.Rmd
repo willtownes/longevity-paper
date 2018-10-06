@@ -40,19 +40,21 @@ knn classifier
 ```{r}
 fit<-knn(Xtrn,Xtst,ytrn,k=10,prob=TRUE)
 probs<-attr(fit,"prob")
-probs[fit==0]<-1-probs[fit==0]
+probs[fit=="anti"]<-1-probs[fit=="anti"]
 preds<-prediction(probs,ytst)
 auc.tmp<-performance(preds,"auc")
 (auc<-as.numeric(auc.tmp@y.values)) #0.6
 
 #knn via caret
-system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5,classProbs=TRUE), method="kknn",tuneGrid=data.frame(kmax=c(5,10,15),distance=2,kernel="optimal")))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, distribution="bernoulli", verbose=FALSE, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn", tuneGrid=expand.grid(kmax=c(5,10,15),distance=c(1,2),kernel="optimal")))
+#classProbs=TRUE)
 print(fit)
 p1<-prediction(predict(fit,type="prob")[,2], ytrn)
 p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
 (auc<-performance(p2,"auc")@y.values[[1]])
 plot(performance(p1,"tpr","fpr"),lty=2)
 plot(performance(p2,"tpr","fpr"),add=TRUE)
+abline(0,1,lty=3)
 ```
 
 xgboost
