@@ -6,142 +6,79 @@ output: html_document
 ---
 
 ```{r}
-library(class)
-library(glmnet)
-library(caret)
-library(ROCR)
-source("./util.R")
-spp<-c("yeast","worm","fly","mouse")
-sp<-spp[4]
+library(ggplot2)
+#library(doParallel)
+#registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
+source("./util.R") #loads caret, ROCR
+spp<-c("yeast","worm")
+sp<-spp[2]
+fts<-"go"
 ```
 
 ## Data Loading
 
-Merge GO terms and Survival Data
-
 ```{r}
-sv<-load_genage(sp)
-#ydb<-read.table("data/goterms_yeast.txt",header=TRUE,stringsAsFactors=FALSE)
-#X<-reshape2::acast(ydb,external_gene_name~go_id,fill=0,fun.aggregate=length)
-X<-load_goterms(sp)
-rownames(sv)<-sv$symbol
-gg<-intersect(rownames(sv),rownames(X))
-X<-as.matrix(X[gg,])
-mode(X)<-"integer"
-X<-X[,apply(X,2,sd)>0] #remove features with no variation
-dim(X)
-y<-sv[gg,"pro_longevity"]
-names(y)<-rownames(X)
-
-# train/test split
-train_idx<-createDataPartition(y,p=.75,list=FALSE)
-ytrn<-y[train_idx]
-ytst<-y[-train_idx]
+dat<-readRDS(paste0("./data/auto/",sp,".rds"))
+y<-rep("anti",length(dat$y))
+y[dat$y==1]<-"pro"
+y<-factor(y)
+ytrn<-y[dat$train_idx]
+ytst<-y[-dat$train_idx]
+X<-dat[[fts]]
+mode(X)<-"numeric"
+Xtrn<-X[dat$train_idx,]
+Xtst<-X[-dat$train_idx,]
 ```
 
 knn classifier
 
 ```{r}
-Xtrn<-X[train_idx,]
-Xtst<-X[-train_idx,]
-fit<-knn(Xtrn,Xtst,ytrn,k=10,prob=TRUE)
-probs<-attr(fit,"prob")
-probs[fit==0]<-1-probs[fit==0]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values)) #0.6
+#knn via caret
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="kknn"))
+#tuneGrid=expand.grid(kmax=c(5,10,15),distance=c(1,2),kernel="optimal")
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
-regression-type models
+xgboost
 
 ```{r}
-pca<-FALSE
-if(pca){
-  Xs<-X %*% svd(X,nu=500,nv=500)$v #if PCA adjustment
-  colnames(Xs)<-paste0("pca_",seq.int(500))
-} else {
-  #random subset of columns or use PCA to reduce dims
-  nsample<-min(3000,ncol(X))
-  Xs<-X[,sample.int(ncol(X),nsample)]
-}
-Xtrn<-Xs[train_idx,]
-Xtst<-Xs[-train_idx,]
-```
-
-fixed prediction probability= probability of positive class
-
-```{r}
-probs<-rep(mean(ytrn==1),length(ytst))
-auc.tmp<-performance(prediction(probs,ytst),"auc")
-(auc<-as.numeric(auc.tmp@y.values))
-```
-
-fixed prediction probability= all major (negative) class
-
-```{r}
-probs<-rep(0,length(ytst))
-auc.tmp<-performance(prediction(probs,ytst),"auc")
-(auc<-as.numeric(auc.tmp@y.values)) 
-```
-
-gradient boosted machines
-
-```{r}
-system.time(res2<-train(Xtrn,factor(ytrn), method="gbm", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(interaction.depth=c(1,2),n.trees=c(800,1600),shrinkage=.005,n.minobsinnode=10)))
-print(res2)
-probs<-predict(res2,newdata=Xtst,type="prob")[,"1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="xgbTree"))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
 svm with caret
 ```{r}
-system.time(res3<-train(Xtrn,factor(ytrn), method="svmRadial", distribution="bernoulli", preProcess=NULL, verbose=FALSE, metric="Kappa", trControl=trainControl("cv",5),prob.model=TRUE))
-print(res3)
-probs<-predict(res3,newdata=Xtst,type="prob")[,"1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values))
-plot(performance(preds, measure = "tpr", x.measure = "fpr"),main="SVM")
-abline(v=1-.803)
-abline(h=0.6)
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="svmRadialSigma", prob.model=TRUE))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
 GLMnet prediction
 
 ```{r}
-#pp<-preProcess(Xtrn,method=c("center","scale"))
-#Xtrn2<-cbind(1,predict(pp,Xtrn))
-#Xtst2<-cbind(1,predict(pp,Xtst))
-Xtrn2<-cbind(1,Xtrn)
-Xtst2<-cbind(1,Xtst)
-
-#folds<-createFolds(ytrn)
-#res<-train(mean_lifespan~.,data=d[train_idx,],preProcess=c("center","scale"))
-pca<-FALSE
-alpha<-if(pca){ 0.0 }else{ .9 }
-res<-cv.glmnet(Xtrn2,ytrn,family="binomial",alpha=alpha)
-probs<-predict(res, newx=Xtst2, s="lambda.min", type="response")
-#saveRDS(res,file="glmnet_fit.rds")
-plot(res)
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values))
+system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="glmnet", family="binomial"))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 
-naive bayes
+naive bayes- it needs to throw out sparse predictors with "nzv" preprocessing
 
 ```{r}
-thresh<-5
-X3<-X[,colSums(X)>thresh]
-Xtrn3<-X3[train_idx,]
-Xtst3<-X3[-train_idx,]
-system.time(res<-train(Xtrn3,factor(ytrn), method="nb", preProcess=NULL, metric="Kappa", trControl=trainControl("cv",5), tuneGrid=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))))
-print(res)
-probs<-predict(res,newdata=Xtst3,type="prob")[,"1"]
-preds<-prediction(probs,ytst)
-auc.tmp<-performance(preds,"auc")
-(auc<-as.numeric(auc.tmp@y.values))
+tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))
+system.time(fit<-train(Xtrn, ytrn, preProcess="nzv", metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="nb", tuneGrid=tg, prior=table(ytrn)/length(ytrn)))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
 

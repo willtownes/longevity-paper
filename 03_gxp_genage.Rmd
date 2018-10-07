@@ -8,32 +8,13 @@ output: html_document
 Using gene expression alone to predict pro vs anti longevity genes from genage database.
 
 ```{r}
-library(caret)
-library(ROCR)
-library(class)
-library(glmnet)
-library(xgboost)
 #library(doParallel)
 #registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
+source("./util.R") #loads caret, ROCR
 spp<-c("yeast","worm")
 sp<-spp[2]
 features<-c("archs4","other1")
 fts<-features[1]
-```
-
-```{r}
-#for any caret model, extract the true and false positive rates that can be used to make ROC
-caret_roc<-function(fit,Xtst,ytst,ytrn){
-  p1<-prediction(predict(fit,type="prob")[,2], ytrn)
-  p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
-  p1<-performance(p1,"tpr","fpr")
-  p2<-performance(p2,"tpr","fpr")
-  d1<-data.frame(tpr=p1@y.values[[1]],fpr=p1@x.values[[1]],fold="train")
-  d2<-data.frame(tpr=p2@y.values[[1]],fpr=p2@x.values[[1]],fold="test")
-  rbind(d1,d2)
-}
-
-roc2auc<-function(fpr,tpr){ sum(tpr[-1]*diff(fpr)) }
 ```
 
 ## Data Loading

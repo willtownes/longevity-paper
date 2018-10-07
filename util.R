@@ -1,6 +1,8 @@
 #utility functions
 library(dplyr)
 library(Matrix)
+library(caret)
+library(ROCR)
 
 org_match<-list(yeast="Saccharomyces cerevisiae",
                 worm="Caenorhabditis elegans",
@@ -28,4 +30,21 @@ load_goterms<-function(species=c("yeast","worm","fly","mouse"),fpath="./data/got
   X<-sparseMatrix(as.integer(i),as.integer(j))
   rownames(X)<-toupper(levels(i)); colnames(X)<-levels(j)
   if(sparse){ return(X) } else { return(as.matrix(X)) }
+}
+
+#for any caret model, extract the true and false positive rates that can be used to make ROC
+caret_roc<-function(fit,Xtst,ytst,ytrn){
+  p1<-prediction(predict(fit,type="prob")[,2], ytrn)
+  p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
+  p1<-performance(p1,"tpr","fpr")
+  p2<-performance(p2,"tpr","fpr")
+  d1<-data.frame(tpr=p1@y.values[[1]],fpr=p1@x.values[[1]],fold="train")
+  d2<-data.frame(tpr=p2@y.values[[1]],fpr=p2@x.values[[1]],fold="test")
+  rbind(d1,d2)
+}
+
+roc2auc<-function(fpr,tpr){ 
+  #trapezoid rule for area under the curve
+  m<-(tpr[-1]+tpr[-length(tpr)])/2
+  sum(m*diff(fpr)) 
 }

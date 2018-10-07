@@ -207,7 +207,7 @@ normalize_gxp_counts<-function(X){
   log2(1+t(1e6*t(X)/colSums(X)))
 }
 
-preprocess<-function(X,binary=FALSE,min_nonzero=5){
+preprocess<-function(X,binary=FALSE,min_nonzero=1){
   X<-as.matrix(X)
   X<-X[,colSums(X!=0)>=min_nonzero]
   sds<-apply(X,2,sd)
