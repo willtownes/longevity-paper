@@ -10,7 +10,7 @@ Using gene expression alone to predict pro vs anti longevity genes from genage d
 ```{r}
 #library(doParallel)
 #registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
-source("./util.R") #loads caret, ROCR
+source("./carets.R") #loads caret, ROCR
 spp<-c("yeast","worm")
 sp<-spp[2]
 features<-c("archs4","other1")

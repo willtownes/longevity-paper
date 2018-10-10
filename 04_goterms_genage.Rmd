@@ -9,7 +9,7 @@ output: html_document
 library(ggplot2)
 #library(doParallel)
 #registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
-source("./util.R") #loads caret, ROCR
+source("./carets.R") #loads caret, ROCR
 spp<-c("yeast","worm")
 sp<-spp[2]
 fts<-"go"
