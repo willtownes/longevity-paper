@@ -225,26 +225,26 @@ load_data<-function(sp){
   archs4<-assay(archs4,"counts")/rowData(archs4)$length
   archs4<-normalize_gxp_counts(archs4)
   if(sp=="yeast"){
-    other1<-readRDS("./data/deleteome_responsive_mutants.rds")
-    other1<-assay(other1,"logratio")
+    gxp<-readRDS("./data/deleteome_responsive_mutants.rds")
+    gxp<-assay(gxp,"logratio")
   } else if(sp=="worm"){
-    other1<-read.table("./data/worm_scrna_atlas_merged_umi.txt")
-    other1<-normalize_gxp_counts(other1)
+    gxp<-read.table("./data/worm_scrna_atlas_merged_umi.txt")
+    gxp<-normalize_gxp_counts(gxp)
   } else {
-    other1<-NULL
+    gxp<-NULL
   }
   go<-load_goterms(sp)
   gg<-intersect(rownames(sv),rownames(archs4))
-  gg<-intersect(gg,rownames(other1))
+  gg<-intersect(gg,rownames(gxp))
   gg<-intersect(gg,rownames(go))
   y<-sv[gg,"pro_longevity"]
   names(y)<-gg
   archs4<-preprocess(archs4[gg,])
-  other1<-preprocess(other1[gg,])
+  gxp<-preprocess(gxp[gg,])
   go<-preprocess(go[gg,],binary=TRUE)
   # train/test split
   train_idx<-caret::createDataPartition(y,p=.75,list=FALSE)
-  mget(c("y","archs4","other1","go","train_idx"))
+  mget(c("y","archs4","gxp","go","train_idx"))
 }
 
 if(!dir.exists("./data/auto")){

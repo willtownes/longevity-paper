@@ -10,10 +10,11 @@ Using gene expression alone to predict pro vs anti longevity genes from genage d
 ```{r}
 #library(doParallel)
 #registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
-source("./carets.R") #loads caret, ROCR
+library(dplyr)
+source("./carets.R") #loads caret, ROCR, ggplot2
 spp<-c("yeast","worm")
 sp<-spp[2]
-features<-c("archs4","other1")
+features<-c("archs4","gxp")
 fts<-features[1]
 ```
 
@@ -27,8 +28,27 @@ y<-factor(y)
 ytrn<-y[dat$train_idx]
 ytst<-y[-dat$train_idx]
 X<-dat[[fts]]
+#mode(X)<-"numeric"
 Xtrn<-X[dat$train_idx,]
 Xtst<-X[-dat$train_idx,]
+```
+
+all algorithms
+
+```{r}
+mods<-c("kknn","xgbTree","svmRadialSigma","glmnet","nb")
+f<-function(m){
+  print(m)
+  fitcaret(Xtrn,ytrn,m)
+}
+system.time(res<-sapply(mods,f,simplify=FALSE))
+res2<-lapply(res,caret_roc,Xtst,ytst,ytrn)
+for(j in names(res2)){
+  res2[[j]]$alg<-j
+}
+pd<-do.call(rbind,res2)
+ggplot(subset(pd,fold=="test"),aes(x=fpr,y=tpr,col=alg))+geom_line()+theme_bw()
+pd %>% subset(fold=="test") %>% group_by(alg) %>% summarize(auc=roc2auc(fpr,tpr)) %>% arrange(desc(auc))
 ```
 
 knn classifier
@@ -77,6 +97,17 @@ GLMnet prediction
 
 ```{r}
 system.time(fit<-train(Xtrn, ytrn, preProcess=NULL, metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="glmnet", family="binomial"))
+print(fit)
+perf<-caret_roc(fit,Xtst,ytst,ytrn)
+ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
+roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
+```
+
+Naive Bayes
+
+```{r}
+tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))
+system.time(fit<-train(Xtrn, ytrn, preProcess="nzv", metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="nb", tuneGrid=tg, prior=table(ytrn)/length(ytrn)))
 print(fit)
 perf<-caret_roc(fit,Xtst,ytst,ytrn)
 ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)

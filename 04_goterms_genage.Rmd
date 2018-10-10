@@ -6,16 +6,16 @@ output: html_document
 ---
 
 ```{r}
-library(ggplot2)
 #library(doParallel)
 #registerDoParallel(makeCluster(detectCores()-1)) #3 cores on mac
-source("./carets.R") #loads caret, ROCR
+library(dplyr)
+source("./carets.R") #loads caret, ROCR, ggplot2
 spp<-c("yeast","worm")
 sp<-spp[2]
 fts<-"go"
 ```
 
-## Data Loading
+Data Loading
 
 ```{r}
 dat<-readRDS(paste0("./data/auto/",sp,".rds"))
@@ -28,6 +28,26 @@ X<-dat[[fts]]
 mode(X)<-"numeric"
 Xtrn<-X[dat$train_idx,]
 Xtst<-X[-dat$train_idx,]
+```
+
+all algorithms
+
+```{r}
+mods<-c("kknn","xgbTree","svmRadialSigma","glmnet","nb")
+f<-function(m){
+  print(m)
+  fitcaret(Xtrn,ytrn,m)
+}
+#system.time(res<-sapply(mods,f,simplify=FALSE))
+system.time(res<-parallel::mclapply(mods,f,mc.cores=3))
+names(res)<-mods
+res2<-lapply(res,caret_roc,Xtst,ytst,ytrn)
+for(j in names(res2)){
+  res2[[j]]$alg<-j
+}
+pd<-do.call(rbind,res2)
+ggplot(subset(pd,fold=="test"),aes(x=fpr,y=tpr,col=alg))+geom_line()+theme_bw()
+pd %>% subset(fold=="test") %>% group_by(alg) %>% summarize(auc=roc2auc(fpr,tpr)) %>% arrange(desc(auc))
 ```
 
 knn classifier
