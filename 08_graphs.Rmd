@@ -1,0 +1,29 @@
+---
+title: "Make Graphs"
+author: "Will Townes"
+date: "10/11/2018"
+output: html_document
+---
+
+```{r}
+library(dplyr)
+source("./carets.R")
+
+#load all ROC results
+bp<-"./results/auto"
+species<-c("worm","yeast")
+fts<-c("go","archs4","gxp","go_archs4","go_gxp")
+atlas<-expand.grid(features=fts,species=species,stringsAsFactors=FALSE)
+load_data<-function(sp,ft){
+  pth<-file.path(bp,sp,ft,"roc.txt")
+  d<-read.table(pth,header=TRUE)
+  d$species<-sp
+  d$features<-ft
+  d
+}
+pd<-do.call(rbind,mapply(load_data,atlas$species,atlas$features,SIMPLIFY=FALSE))
+rownames(pd)<-NULL
+auc<-pd %>% group_by(species,features,alg,fold) %>% summarize(auc=roc2auc(fpr,tpr))
+ggplot(subset(auc,fold=="test"),aes(x=alg,y=auc,col=features))+geom_point()+facet_wrap(~species)+theme_bw()
+ggplot(subset(auc,fold=="test"),aes(x=features,y=auc,col=alg))+geom_point()+facet_wrap(~species)+theme_bw()
+```
