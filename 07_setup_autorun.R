@@ -1,5 +1,6 @@
 #This script should be run after 01_data_loading.Rmd
 #library(parallel)
+source("./carets.R")
 
 fp<-file.path
 
@@ -18,7 +19,7 @@ make_predictors<-function(features,dat){
 caret_all<-function(Xtrn,ytrn){
   algs<-c("kknn","xgbTree","svmRadialSigma","glmnet","nb")
   f<-function(a,Xtrn,ytrn){fitcaret(Xtrn,ytrn,a)}
-  fits<-sapply(mods,f,simplify=FALSE)
+  fits<-sapply(algs,f,Xtrn,ytrn,simplify=FALSE)
 }
 
 dat2roc<-function(features,dat,basedir,usecache=TRUE,verbose=TRUE){
@@ -61,14 +62,16 @@ master<-function(sp,ft){
   #sp="worm" or "yeast"
   #ft= "go", "gxp", "go_gxp" etc
   #runs all algorithms for the species/features combo and saves to file
+  sp<-as.character(sp); ft<-as.character(ft)
   dat<-readRDS(fp("./data/auto",paste0(sp,".rds")))
   dat2roc(ft,dat,fp("./results/auto",sp),usecache=TRUE,verbose=TRUE)
 }
 
 species<-c("worm","yeast")
-for(s in species){ mkdir_p(fp("./data/auto",sp)) }
+for(sp in species){ mkdir_p(fp("./results/auto",sp)) }
 fts<-c("go","archs4","gxp","go_archs4","go_gxp")
 #yeast gxp is deleteome measured genes
 #worm gxp is merged UMIs of worm cell atlas
 atlas<-expand.grid(fts=fts,species=species)
 parallel::mcmapply(master,atlas$species,atlas$fts,mc.cores=4)
+#mapply(master,atlas$species,atlas$fts)
