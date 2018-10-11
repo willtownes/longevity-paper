@@ -38,11 +38,14 @@ f<-function(m){
   print(m)
   fitcaret(Xtrn,ytrn,m)
 }
-#system.time(res<-sapply(mods,f,simplify=FALSE))
-system.time(res<-parallel::mclapply(mods,f,mc.cores=3))
-names(res)<-mods
-res2<-lapply(res,caret_roc,Xtst,ytst,ytrn)
-for(j in names(res2)){
+system.time(res<-sapply(mods,f,simplify=FALSE))
+#system.time(res<-parallel::mclapply(mods,f,mc.cores=3))
+#names(res)<-mods
+#res2<-lapply(res,caret_roc,Xtst,ytst,ytrn)
+res2<-list()
+for(j in mods){
+  print(j)
+  res2[[j]]<-caret_roc(res[[j]],Xtst,ytst,ytrn)
   res2[[j]]$alg<-j
 }
 pd<-do.call(rbind,res2)

@@ -9,7 +9,7 @@ fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","n
   #Xtrn<-X[idtr,]
   #Xtst<-X[-idtr,]
   mth<-match.arg(mth)
-  args<-list(Xtrn,ytrn,preProcess=NULL,metric="Kappa",trControl=trc,method=mth)
+  args<-list(Xtrn,ytrn,preProcess="zv",metric="Kappa",trControl=trc,method=mth)
   if(mth=="svmRadialSigma"){ args$prob.model<-TRUE }
   if(mth=="glmnet"){ args$family<-"binomial" }
   if(mth=="nb"){
