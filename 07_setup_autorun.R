@@ -1,3 +1,4 @@
+#>>time Rscript 07_setup_autorun.R
 #This script should be run after 01_data_loading.Rmd
 #library(parallel)
 source("./carets.R")

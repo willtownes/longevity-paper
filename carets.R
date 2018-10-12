@@ -3,7 +3,7 @@ library(caret)
 library(ROCR)
 
 #generic function for fitting models with caret
-fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","nb"),trc=trainControl("repeatedcv",5,repeats=2)){
+fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","nb"),trc=trainControl("repeatedcv",10,repeats=2)){
   #ytrn<-y[idtr]
   #ytst<-y[-idtr]
   #Xtrn<-X[idtr,]
