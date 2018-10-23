@@ -13,7 +13,7 @@ Using gene expression alone to predict pro vs anti longevity genes from genage d
 library(dplyr)
 source("./carets.R") #loads caret, ROCR, ggplot2
 spp<-c("yeast","worm")
-sp<-spp[2]
+sp<-spp[1]
 features<-c("archs4","gxp")
 fts<-features[1]
 ```
@@ -105,6 +105,29 @@ roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 
 Naive Bayes
 
+```{r}
+trc=trainControl("repeatedcv",10,repeats=2)
+args<-list(Xtrn,ytrn,preProcess="zv",metric="Kappa",trControl=trc,method="nb")
+args$preProcess<-"nzv"
+tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0,0.5,1.0))
+args$tuneGrid<-tg
+args$prior<-table(ytrn)/length(ytrn)
+res<-do.call(train,args)
+
+#manually
+library(klaR)
+bad<-nearZeroVar(X)
+Xtrn2<-Xtrn[,-bad]
+Xtst2<-Xtst[,-bad]
+res<-NaiveBayes(Xtrn2,ytrn,usekernel=TRUE)
+preds<-predict(res,Xtst2)
+
+library(naivebayes)
+res<-naive_bayes(Xtrn,ytrn,usekernel=TRUE)
+preds<-predict(res,Xtst2,type="prob")
+res<-train(Xtrn,ytrn,preProcess="nzv",metric="Kappa",trControl=trainControl("repeatedcv",3,repeats=1),method="naive_bayes",tuneGrid=expand.grid(laplace=c(0.5,1),usekernel=TRUE,adjust=c(0.5,1)))
+preds<-predict(res,Xtst,type="prob")
+```
 ```{r}
 tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))
 system.time(fit<-train(Xtrn, ytrn, preProcess="nzv", metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="nb", tuneGrid=tg, prior=table(ytrn)/length(ytrn)))
