@@ -23,25 +23,24 @@ caret_all<-function(Xtrn,ytrn){
   fits<-sapply(algs,f,Xtrn,ytrn,simplify=FALSE)
 }
 
-dat2roc<-function(features,dat,basedir,usecache=TRUE,verbose=TRUE){
+dat2roc<-function(features,fold,dat,basedir,usecache=TRUE,verbose=TRUE){
   #features is a string saying what predictors to use (eg go_gxp)
+  #fold is which CV fold to use from dat (an integer in 1...5)
   #dat is the list of all data
   #caches the list of fitted models (all algs) under <basedir>/<features>/carets.rds
   #writes the tpr and fpr (ROC) to <basedir>/<features>/roc.txt
   #basedir is usually something like "./results/auto/yeast"
   pth<-fp(basedir,features) #eg "./results/auto/yeast/go_gxp"
-  if(verbose){ print(pth) }
+  if(verbose){ print(paste(pth,"fold:",fold)) }
   mkdir_p(pth)
-  cachepath<-fp(pth,"carets.rds")
-  y<-rep("anti",length(dat$y))
-  y[dat$y==1]<-"pro"
-  y<-factor(y)
-  ytrn<-y[dat$train_idx]
-  ytst<-y[-dat$train_idx]
+  cachepath<-fp(pth,paste0("carets",fold,".rds"))
+  test_idx<-dat$cv_folds[[fold]]
+  ytrn<-dat$y[-test_idx]
+  ytst<-dat$y[test_idx]
   X<-make_predictors(features,dat)
   mode(X)<-"numeric"
-  Xtrn<-X[dat$train_idx,]
-  Xtst<-X[-dat$train_idx,]
+  Xtrn<-X[-test_idx,]
+  Xtst<-X[test_idx,]
   if(usecache && file.exists(cachepath)){
     #if(verbose){ print("reusing cached caret fits") }
     fits<-readRDS(cachepath)
@@ -56,23 +55,25 @@ dat2roc<-function(features,dat,basedir,usecache=TRUE,verbose=TRUE){
     d
   }
   res<-do.call(rbind,lapply(names(fits),rocfunc))
-  write.table(res,file=fp(pth,"roc.txt"),quote=FALSE,row.names=FALSE)
+  res$cv_fold<-fold
+  write.table(res,file=fp(pth,paste0("roc",fold,".txt")),quote=FALSE,row.names=FALSE)
 }
 
-master<-function(sp,ft){
+master<-function(sp,ft,fold){
   #sp="worm" or "yeast"
   #ft= "go", "gxp", "go_gxp" etc
   #runs all algorithms for the species/features combo and saves to file
   sp<-as.character(sp); ft<-as.character(ft)
   dat<-readRDS(fp("./data/auto",paste0(sp,".rds")))
-  dat2roc(ft,dat,fp("./results/auto",sp),usecache=TRUE,verbose=TRUE)
+  dat2roc(ft,fold,dat,fp("./results/auto",sp),usecache=TRUE,verbose=TRUE)
 }
 
 species<-c("worm","yeast")
 for(sp in species){ mkdir_p(fp("./results/auto",sp)) }
 fts<-c("go","archs4","gxp","go_archs4","go_gxp")
+cv_folds<-1:5
 #yeast gxp is deleteome measured genes
 #worm gxp is merged UMIs of worm cell atlas
-atlas<-expand.grid(fts=fts,species=species)
-parallel::mcmapply(master,atlas$species,atlas$fts,mc.cores=4)
+atlas<-expand.grid(fold=cv_folds,fts=fts,species=species)
+parallel::mcmapply(master,atlas$species,atlas$fts,atlas$fold,mc.cores=4)
 #mapply(master,atlas$species,atlas$fts)

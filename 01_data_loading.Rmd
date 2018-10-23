@@ -237,14 +237,20 @@ load_data<-function(sp){
   gg<-intersect(rownames(sv),rownames(archs4))
   gg<-intersect(gg,rownames(gxp))
   gg<-intersect(gg,rownames(go))
-  y<-sv[gg,"pro_longevity"]
+  y0<-sv[gg,"pro_longevity"]
+  y<-rep("anti",length(y0))
+  y[y0==1]<-"pro"
+  y<-factor(y)
   names(y)<-gg
   archs4<-preprocess(archs4[gg,])
   gxp<-preprocess(gxp[gg,])
   go<-preprocess(go[gg,],binary=TRUE)
   # train/test split
-  train_idx<-caret::createDataPartition(y,p=.75,list=FALSE)
-  mget(c("y","archs4","gxp","go","train_idx"))
+  #train_idx<-caret::createDataPartition(y,p=.75,list=FALSE)
+  #mget(c("y","archs4","gxp","go","train_idx"))
+  # cross validation folds
+  cv_folds<-caret::createFolds(y,k=5)
+  mget(c("y","archs4","gxp","go","cv_folds"))
 }
 
 if(!dir.exists("./data/auto")){
