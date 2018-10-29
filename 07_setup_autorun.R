@@ -18,7 +18,7 @@ make_predictors<-function(features,dat){
 }
 
 caret_all<-function(Xtrn,ytrn){
-  algs<-c("kknn","xgbTree","svmRadialSigma","glmnet","nb")
+  algs<-c("naive_bayes","kknn","xgbTree","svmRadialSigma","glmnet")
   f<-function(a,Xtrn,ytrn){fitcaret(Xtrn,ytrn,a)}
   fits<-sapply(algs,f,Xtrn,ytrn,simplify=FALSE)
 }

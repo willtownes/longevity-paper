@@ -3,20 +3,15 @@ library(caret)
 library(ROCR)
 
 #generic function for fitting models with caret
-fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","nb"),trc=trainControl("repeatedcv",10,repeats=2)){
-  #ytrn<-y[idtr]
-  #ytst<-y[-idtr]
-  #Xtrn<-X[idtr,]
-  #Xtst<-X[-idtr,]
+fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","naive_bayes"),trc=trainControl("repeatedcv",10,repeats=2)){
   mth<-match.arg(mth)
   args<-list(Xtrn,ytrn,preProcess="zv",metric="Kappa",trControl=trc,method=mth)
   if(mth=="svmRadialSigma"){ args$prob.model<-TRUE }
   if(mth=="glmnet"){ args$family<-"binomial" }
-  if(mth=="nb"){
+  if(mth=="naive_bayes"){
     args$preProcess<-"nzv"
-    tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))
+    tg=expand.grid(laplace=0,usekernel=TRUE,adjust=c(0.5,1.0))
     args$tuneGrid<-tg
-    args$prior<-table(ytrn)/length(ytrn)
   }
   do.call(train,args)
 }
