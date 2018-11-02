@@ -13,17 +13,18 @@ source("./carets.R")
 bp<-"./results/auto"
 species<-c("worm","yeast")
 fts<-c("go","archs4","gxp","go_archs4","go_gxp")
-atlas<-expand.grid(features=fts,species=species,stringsAsFactors=FALSE)
-load_data<-function(sp,ft){
-  pth<-file.path(bp,sp,ft,"roc.txt")
+atlas<-expand.grid(features=fts,species=species,cv_folds=1:5,stringsAsFactors=FALSE)
+load_data<-function(sp,ft,fld){
+  pth<-file.path(bp,sp,ft,paste0("roc",fld,".txt"))
   d<-read.table(pth,header=TRUE)
   d$species<-sp
   d$features<-ft
+  d$cv_fold<-fld
   d
 }
-pd<-do.call(rbind,mapply(load_data,atlas$species,atlas$features,SIMPLIFY=FALSE))
+pd<-do.call(rbind,mapply(load_data,atlas$species,atlas$features,atlas$cv_folds,SIMPLIFY=FALSE))
 rownames(pd)<-NULL
-auc<-pd %>% group_by(species,features,alg,fold) %>% summarize(auc=roc2auc(fpr,tpr))
-ggplot(subset(auc,fold=="test"),aes(x=alg,y=auc,col=features))+geom_point(size=4)+facet_wrap(~species)+theme_bw()
-ggplot(subset(auc,fold=="test"),aes(x=features,y=auc,col=alg))+geom_point(size=4)+facet_wrap(~species)+theme_bw()
+auc<-pd %>% group_by(species,features,alg,fold,cv_fold) %>% summarize(auc=roc2auc(fpr,tpr))
+ggplot(subset(auc,fold=="test"),aes(x=alg,y=auc,col=features))+geom_boxplot()+facet_wrap(~species)+theme_bw()
+ggplot(subset(auc,fold=="test"),aes(x=features,y=auc,col=alg))+geom_boxplot()+facet_wrap(~species)+theme_bw()
 ```
