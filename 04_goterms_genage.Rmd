@@ -19,15 +19,14 @@ Data Loading
 
 ```{r}
 dat<-readRDS(paste0("./data/auto/",sp,".rds"))
-y<-rep("anti",length(dat$y))
-y[dat$y==1]<-"pro"
-y<-factor(y)
-ytrn<-y[dat$train_idx]
-ytst<-y[-dat$train_idx]
+y<-dat$y
+idx<-dat$cv_folds[[1]]
+ytrn<-y[-idx]
+ytst<-y[idx]
 X<-dat[[fts]]
 mode(X)<-"numeric"
-Xtrn<-X[dat$train_idx,]
-Xtst<-X[-dat$train_idx,]
+Xtrn<-X[-idx,]
+Xtst<-X[idx,]
 ```
 
 all algorithms
@@ -97,10 +96,10 @@ roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 naive bayes- it needs to throw out sparse predictors with "nzv" preprocessing
 
 ```{r}
-tg=expand.grid(fL=c(0,0.5,1.0),usekernel=TRUE,adjust=c(0.5,1.0))
-system.time(fit<-train(Xtrn, ytrn, preProcess="nzv", metric="Kappa", trControl=trainControl("repeatedcv",5,repeats=2),  method="nb", tuneGrid=tg, prior=table(ytrn)/length(ytrn)))
-print(fit)
-perf<-caret_roc(fit,Xtst,ytst,ytrn)
+res<-train(Xtrn,ytrn,preProcess="nzv",metric="Kappa",trControl=trainControl("repeatedcv",3,repeats=1),method="naive_bayes",tuneGrid=expand.grid(laplace=c(0,.5),usekernel=TRUE,adjust=c(0.5,1)))
+print(res)
+preds<-predict(res,Xtst,type="prob")
+perf<-caret_roc(res,Xtst,ytst,ytrn)
 ggplot(perf,aes(x=fpr,y=tpr,col=fold))+geom_line()+theme_bw()+geom_abline(slope=1,intercept=0,alpha=.5)
 roc2auc(perf$fpr[perf$fold=="test"],perf$tpr[perf$fold=="test"])
 ```
