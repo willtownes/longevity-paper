@@ -1,0 +1,6 @@
+glmnet svmRadialSigma xgbTree naive_bayes kknn
+glmnet 0 0.54 0.74 0.88 0.92
+svmRadialSigma 0.46 0 0.72 0.88 0.9
+xgbTree 0.26 0.28 0 0.74 0.86
+naive_bayes 0.12 0.12 0.26 0 0.66
+kknn 0.08 0.1 0.14 0.34 0

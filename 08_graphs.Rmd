@@ -6,7 +6,7 @@ output: html_document
 ---
 
 ```{r}
-library(dplyr)
+library(tidyverse)
 source("./carets.R")
 
 #load all ROC results
@@ -24,7 +24,43 @@ load_data<-function(sp,ft,fld){
 }
 pd<-do.call(rbind,mapply(load_data,atlas$species,atlas$features,atlas$cv_folds,SIMPLIFY=FALSE))
 rownames(pd)<-NULL
-auc<-pd %>% group_by(species,features,alg,fold,cv_fold) %>% summarize(auc=roc2auc(fpr,tpr))
-ggplot(subset(auc,fold=="test"),aes(x=alg,y=auc,col=features))+geom_boxplot()+facet_wrap(~species)+theme_bw()
-ggplot(subset(auc,fold=="test"),aes(x=features,y=auc,col=alg))+geom_boxplot()+facet_wrap(~species)+theme_bw()
+auc0<-pd %>% group_by(species,features,alg,fold,cv_fold) %>% summarize(auc=roc2auc(fpr,tpr))
+auc<-subset(auc0,fold=="test")
+auc$features<-factor(auc$features,levels=c("archs4","gxp","go","go_archs4","go_gxp"),ordered=TRUE)
 ```
+
+pairwise comparison of all algorithms. Focusing only on test set AUC, for each combination of species, features set, and cross validation fold, rank the algorithms according to their AUC. Then, for each pairwise comparison of algorithms, compute the fraction of folds where one algorithm was superior to the other. Order the algorithms by the minimum of these proportions. The idea is that a consistently good algorithm is better than all other algorithms uniformly.
+
+```{r}
+algs<-levels(auc$alg)
+pc<-spread(auc,alg,auc)
+rk<-t(apply(pc[,algs],1,rank))
+pc2<-matrix(0,nrow=length(algs),ncol=length(algs))
+rownames(pc2)<-colnames(pc2)<-algs
+for(i in seq_along(algs)){
+  for(j in seq_along(algs)){
+    #fraction of folds where 'i' was better than 'j'
+    pc2[i,j]<-mean(rk[,i]>rk[,j])
+  }
+}
+o<-order(apply(pc2,1,function(t){min(t[t>0])}),decreasing=TRUE)
+pc2<-pc2[o,o]
+print(pc2)
+write.table(pc2,file="./results/auto/alg_table.txt",quote=FALSE)
+
+#order levels of algs factor based on performance
+auc$alg<-factor(auc$alg,levels=rev(rownames(pc2)),ordered=TRUE)
+```
+
+overall summary of all results
+
+```{r}
+cbb<-c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7","#F0E442","#000000")
+ggplot(auc,aes(x=alg,y=auc,fill=features))+geom_boxplot()+facet_wrap(~species)+theme_bw()+scale_fill_manual(values=cbb)
+ggplot(auc,aes(x=features,y=auc,fill=alg))+geom_boxplot()+facet_wrap(~species)+theme_bw()+scale_fill_manual(values=cbb)
+
+#subset on best performing algorithms only
+ggplot(subset(auc,alg %in% c("svmRadialSigma","glmnet")),aes(x=features,y=auc,fill=alg))+geom_boxplot()+facet_wrap(~species)+theme_bw()+scale_fill_manual(values=cbb[4:5])
+```
+
+
