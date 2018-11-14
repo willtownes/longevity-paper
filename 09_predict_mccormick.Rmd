@@ -1,0 +1,80 @@
+---
+title: "GO GXP McCormick"
+author: "Will Townes"
+date: "11/14/2018"
+output: html_document
+---
+
+```{r}
+library(SummarizedExperiment)
+library(glmnet)
+source("./util.R") #loads dplyr and Matrix
+```
+
+```{r}
+species<-c("worm","yeast")
+
+normalize_gxp_counts<-function(X){
+  #X either a counts matrix or counts scaled by gene length
+  log2(1+t(1e6*t(X)/colSums(X)))
+}
+
+preprocess<-function(X,binary=FALSE,min_nonzero=1){
+  X<-as.matrix(X)
+  X<-X[,colSums(X!=0)>=min_nonzero]
+  sds<-apply(X,2,sd)
+  X<-X[,sds>1e-12]
+  if(!binary){ 
+    X<-.5*scale(X) 
+  }
+  X
+}
+
+load_data<-function(sp){
+  sv<-load_genage(sp)
+  rownames(sv)<-toupper(sv$symbol)
+  archs4<-readRDS(paste0("./data/archs4",sp,".rds"))
+  archs4<-assay(archs4,"counts")/rowData(archs4)$length
+  archs4<-normalize_gxp_counts(archs4)
+  go<-load_goterms(sp)
+  gg<-intersect(rownames(go),rownames(archs4))
+  id_trn<-intersect(gg,rownames(sv))
+  y0<-sv[id_trn,"pro_longevity"]
+  y<-rep("anti",length(y0))
+  y[y0==1]<-"pro"
+  y<-factor(y)
+  names(y)<-id_trn
+  archs4<-preprocess(archs4[gg,])
+  go<-preprocess(go[gg,],binary=TRUE)
+  X<-cbind(archs4,go)
+  id_tst<-setdiff(rownames(X),id_trn)
+  list(y=y,Xtrn=X[id_trn,],Xtst=X[id_tst,])#,cv_folds=cv_folds)
+}
+```
+
+```{r}
+dat<-load_data("worm")
+cv_folds<-caret::createFolds(dat$y,k=5)
+for(i in seq_along(cv_folds)){
+  cv_folds[[i]]<-data.frame(id=cv_folds[[i]],fold=i)
+}
+cv_folds<-do.call(rbind,cv_folds)
+o<-order(cv_folds$id)
+cv_folds<-cv_folds[o,]
+foldid<-cv_folds$fold
+alphas<-seq(from=0,to=1,by=.1)
+f<-function(a){
+  cv.glmnet(dat$Xtrn,dat$y,alpha=a,foldid=foldid,family="binomial",standardize=FALSE)
+}
+system.time(res<-lapply(alphas,f))
+best<-list(alpha=NA,cvm=Inf)
+for(i in seq_along(alphas)){
+  a<-alphas[i]
+  min_cvm<-min(res[[i]]$cvm)
+  if(min_cvm<best$cvm){
+    best$alpha<-a; best$cvm<-min_cvm
+  }
+}
+fit<-res[[which(alphas==best$alpha)]]
+preds<-predict(fit,dat$Xtst,type="response")
+```
