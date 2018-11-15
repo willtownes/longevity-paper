@@ -1,6 +1,7 @@
 \documentclass{article}
 \usepackage{authblk}
 \usepackage{hyperref}
+\usepackage{graphicx}
 \begin{document}
 % Title of paper
 \title{Prediction of Aging by Gene Expression}
@@ -36,7 +37,20 @@ To assess predictive performance of different combinations of feature sets on pr
 
 The performance of 5 classification algorithms was compared across 2 species and 5 different feature sets, each with 5 CV folds, resulting in 50 AUC values for each algorithm. For each pairwise comparison of algorithms, the fraction of times one algorithm had higher AUC than the other was calculated across all combinations of species, feature set, and CV fold. The results are shown in table 1, indicating pglm and svm consistently outperformed other algorithms.
 
+\begin{table}[]
+\begin{tabular}{cccccc}
+             & \textbf{pglm} & \textbf{svm} & \textbf{xgb} & \textbf{nb} & \textbf{knn} \\
+\textbf{pglm} & 0             & 0.54         & 0.74         & 0.88        & 0.92         \\
+\textbf{svm}  & 0.46          & 0            & 0.72         & 0.88        & 0.9          \\
+\textbf{xgb}  & 0.26          & 0.28         & 0            & 0.74        & 0.86         \\
+\textbf{nb}   & 0.12          & 0.12         & 0.26         & 0           & 0.66         \\
+\textbf{knn}  & 0.08          & 0.1          & 0.14         & 0.34        & 0
+\end{tabular}
+\end{table}
+
 Focusing on only the best two algorithms (svm and pglm), the predictive performance of different feature sets was compared using AUC. GO terms generally gave better predictions than gene expression features alone, but combining GO and gene expression together increased AUC above the performance of GO alone. Finally, the ARCHS4 data gave better performance than the cell atlas data for worms, but for yeast the deleteome features were superior to the ARCHS4. This could be simply due to the fact that the number of features in the worm cell atlas data was much less than the worm ARCHS4 data. Alternatively, it could be due to the greater variation in experimental conditions across deleteome features (comprehensive knockouts of genes) compared to worm cell atlas features (different tissues in normal worms).
+
+\includegraphics{./auc_svm_pglm.pdf}
 
 \section{Conclusions}
 
