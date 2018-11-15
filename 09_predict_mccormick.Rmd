@@ -8,6 +8,7 @@ output: html_document
 ```{r}
 library(SummarizedExperiment)
 library(glmnet)
+library(ggplot2)
 source("./util.R") #loads dplyr and Matrix
 ```
 
@@ -53,28 +54,83 @@ load_data<-function(sp){
 ```
 
 ```{r}
-dat<-load_data("worm")
-cv_folds<-caret::createFolds(dat$y,k=5)
-for(i in seq_along(cv_folds)){
-  cv_folds[[i]]<-data.frame(id=cv_folds[[i]],fold=i)
-}
-cv_folds<-do.call(rbind,cv_folds)
-o<-order(cv_folds$id)
-cv_folds<-cv_folds[o,]
-foldid<-cv_folds$fold
-alphas<-seq(from=0,to=1,by=.1)
-f<-function(a){
-  cv.glmnet(dat$Xtrn,dat$y,alpha=a,foldid=foldid,family="binomial",standardize=FALSE)
-}
-system.time(res<-lapply(alphas,f))
-best<-list(alpha=NA,cvm=Inf)
-for(i in seq_along(alphas)){
-  a<-alphas[i]
-  min_cvm<-min(res[[i]]$cvm)
-  if(min_cvm<best$cvm){
-    best$alpha<-a; best$cvm<-min_cvm
+#sp<-"worm"
+for(sp in species){
+  print(sp)
+  dat<-load_data(sp)
+  cv_folds<-caret::createFolds(dat$y,k=5)
+  for(i in seq_along(cv_folds)){
+    cv_folds[[i]]<-data.frame(id=cv_folds[[i]],fold=i)
   }
+  cv_folds<-do.call(rbind,cv_folds)
+  o<-order(cv_folds$id)
+  cv_folds<-cv_folds[o,]
+  foldid<-cv_folds$fold
+  alphas<-seq(from=0,to=1,by=.05)
+  f<-function(a){
+    cv.glmnet(dat$Xtrn,dat$y,alpha=a,foldid=foldid,family="binomial",standardize=FALSE)
+  }
+  system.time(res<-lapply(alphas,f))
+  best<-list(alpha=NA,cvm=Inf)
+  for(i in seq_along(alphas)){
+    a<-alphas[i]
+    min_cvm<-min(res[[i]]$cvm)
+    if(min_cvm<best$cvm){
+      best$alpha<-a; best$cvm<-min_cvm
+    }
+  }
+  print(best)
+  fit<-res[[which(alphas==best$alpha)]]
+  g<-function(fit,type=c("train","test")){
+    type<-match.arg(type)
+    if(type=="train"){
+      preds<-predict(fit,dat$Xtrn,type="response",s="lambda.min")
+    } else {
+      preds<-predict(fit,dat$Xtst,type="response",s="lambda.min")
+    }
+    res<-data.frame(gene=rownames(preds),prob_pro_aging=preds[,1])
+    res$genage_annotated<-(type=="train")
+    res
+  }
+  preds<-rbind(g(fit,"train"),g(fit,"test"))
+  ofile<-file.path("./results/auto",paste0("final_preds_",sp,".txt"))
+  write.table(preds,file=ofile,quote=FALSE,row.names=FALSE)
 }
-fit<-res[[which(alphas==best$alpha)]]
-preds<-predict(fit,dat$Xtst,type="response")
+```
+
+For worm, the optimal alpha was .05 (mostly ridge regression). For yeast, the optimal alpha was 0.5 (even mix between ridge and lasso).
+
+```{r}
+worm<-read.table("./results/auto/final_preds_worm.txt",header=TRUE)
+worm$species<-"worm"
+yeast<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+yeast$species<-"yeast"
+pd<-rbind(worm,yeast)
+pd$ga<-"non_genage"
+pd$ga[pd$genage_annotated]<-"genage"
+ggplot(pd,aes(x=prob_pro_aging))+geom_histogram(color="black",fill="white")+facet_grid(ga~species,scales="free_y")+theme_bw()
+ggsave("./results/auto/plots/final_preds_hist.pdf",width=5,height=5)
+```
+
+extract out the top ten pro and anti-aging genes that were not in genage
+
+```{r}
+d<-subset(pd,!genage_annotated)
+#sp<-"worm"
+for(sp in species){
+  ds<-subset(d,species==sp)
+  pro<-head(ds[order(ds$prob_pro_aging,decreasing=TRUE),],10)
+  pro<-pro[,c("gene","prob_pro_aging")]
+  colnames(pro)[2]<-"predicted_probability"
+  pro$aging_effect<-"pro_aging"
+  pro$predicted_probability<-round(pro$predicted_probability,3)
+  anti<-head(ds[order(ds$prob_pro_aging),],10)
+  anti<-anti[,c("gene","prob_pro_aging")]
+  colnames(anti)[2]<-"predicted_probability"
+  anti$aging_effect<-"anti_aging"
+  anti$predicted_probability<-round(1-anti$predicted_probability,3)
+  res<-rbind(pro,anti)
+  ofile<-file.path("./results/auto",paste0("topgenes_",sp,".txt"))
+  write.table(res,file=ofile,quote=FALSE,row.names=FALSE)
+}
 ```
