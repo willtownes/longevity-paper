@@ -1,4 +1,4 @@
-gene prob_pro_aging genage_annotated
+gene prob_pro_longevity genage_annotated
 AAK-2 0.530689121149248 TRUE
 AAKB-1 0.604687265104651 TRUE
 AAKB-2 0.541153478535267 TRUE

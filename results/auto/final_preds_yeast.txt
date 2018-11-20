@@ -1,4 +1,4 @@
-gene prob_pro_aging genage_annotated
+gene prob_pro_longevity genage_annotated
 AAC3 0.00832618748197271 TRUE
 AAH1 0.0324520962738572 TRUE
 AAT1 0.646881608235137 TRUE
