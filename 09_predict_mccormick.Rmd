@@ -9,6 +9,7 @@ output: html_document
 library(SummarizedExperiment)
 library(glmnet)
 library(ggplot2)
+#library(biomaRt)
 source("./util.R") #loads dplyr and Matrix
 ```
 
@@ -50,6 +51,14 @@ load_data<-function(sp){
   X<-cbind(archs4,go)
   id_tst<-setdiff(rownames(X),id_trn)
   list(y=y,Xtrn=X[id_trn,],Xtst=X[id_tst,])#,cv_folds=cv_folds)
+}
+
+get_gene_info<-function(g,sp=c("yeast","worm")){
+  sp_match<-list(yeast=c("scerevisiae","ensembl_gene_id"),
+                  worm=c("celegans","wormbase_gene"))
+  x<-biomaRt::useMart("ensembl", host="http://jul2018.archive.ensembl.org", dataset=paste0(sp_match[[sp]][1],"_gene_ensembl"))
+  #gname<-sp_match[[sp]][2] #eg, "wormbase_gene"
+  z<-biomaRt::getBM(c("external_gene_name","external_gene_source","ensembl_gene_id","gene_biotype","description"), filters="external_gene_name",values=g,mart=x)
 }
 ```
 
@@ -130,7 +139,13 @@ for(sp in species){
   anti$aging_effect<-"anti_longevity"
   anti$predicted_probability<-round(1-anti$predicted_probability,3)
   res<-rbind(pro,anti)
-  ofile<-file.path("./results/auto",paste0("topgenes_",sp,".txt"))
-  write.table(res,file=ofile,quote=FALSE,row.names=FALSE)
+  ginfo<-get_gene_info(as.character(res$gene),sp=sp)
+  colnames(ginfo)[colnames(ginfo)=="external_gene_name"]<-"gene"
+  ginfo$gene<-toupper(ginfo$gene)
+  res<-merge(res,ginfo,by="gene",sort=FALSE)
+  ofile<-file.path("./results/auto",paste0("topgenes_",sp,".csv"))
+  #write.table(res,file=ofile,quote=FALSE,row.names=FALSE)
+  write.csv(res,file=ofile,row.names=FALSE)
 }
+a<-read.csv(file.path("./results/auto",paste0("topgenes_yeast.csv")))
 ```
