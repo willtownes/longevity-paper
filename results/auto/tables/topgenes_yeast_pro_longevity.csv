@@ -1,0 +1,11 @@
+Gene,Prob,ID,Description
+ACS1,0.882,YAL054C,Acetyl-coA synthetase isoform
+UBC5,0.863,YDR059C,Ubiquitin-conjugating enzyme
+ETR1,0.824,YBR026C,2-enoyl thioester reductase
+UBI4,0.779,YLL039C,Ubiquitin
+PDI1,0.72,YCL043C,Protein disulfide isomerase
+PRE3,0.713,YJL001W,Beta 1 subunit of the 20S proteasome
+POR1,0.705,YNL055C,Mitochondrial porin (voltage-dependent anion channel)
+PRE7,0.701,YBL041W,Beta 6 subunit of the 20S proteasome
+HSP12,0.698,YFL014W,Plasma membrane protein involved in maintaining membrane organization
+SBA1,0.695,YKL117W,Co-chaperone that binds and regulates Hsp90 family chaperones

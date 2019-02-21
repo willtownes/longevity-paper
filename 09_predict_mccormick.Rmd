@@ -7,10 +7,16 @@ output: html_document
 
 ```{r}
 library(SummarizedExperiment)
-library(glmnet)
+library(glmnet) 
 library(ggplot2)
 #library(biomaRt)
 source("./util.R") #loads dplyr and Matrix
+fp<-file.path
+bp<-"./results/auto"
+tp<-"./results/auto/tables"
+if(!dir.exists(tp)){
+  dir.create(tp,recursive=TRUE)
+}
 ```
 
 ```{r}
@@ -61,6 +67,8 @@ get_gene_info<-function(g,sp=c("yeast","worm")){
   z<-biomaRt::getBM(c("external_gene_name","external_gene_source","ensembl_gene_id","gene_biotype","description"), filters="external_gene_name",values=g,mart=x)
 }
 ```
+
+Apply glmnet to combined GO and ARCHS4 dataset, cross validate 21 different alpha values from 0 (ridge) to 1 (lasso). glmnet automatically searches grid of 97 different lambda values
 
 ```{r}
 #sp<-"worm"
@@ -117,8 +125,20 @@ yeast$species<-"yeast"
 pd<-rbind(worm,yeast)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
-ggplot(pd,aes(x=prob_pro_longevity))+geom_histogram(color="black",fill="white")+facet_grid(ga~species,scales="free_y")+theme_bw()+xlab("predicted probability of pro-longevity")
+ggplot(pd,aes(x=prob_pro_longevity))+geom_histogram(color="black",fill="white")+facet_grid(ga~species,scales="free_y")+theme_bw()+xlab("predicted probability gene is pro-longevity")+expand_limits(x=c(0,1))
 ggsave("./results/auto/plots/final_preds_hist.pdf",width=5,height=5)
+```
+
+Compare pro-longevity probability with replicative lifespan from McCormick (yeast only)
+
+```{r}
+sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
+sv<-subset(sv,numgenes==1)
+pd2<-merge(subset(pd,species=="yeast"),sv,by.x="gene",by.y="set_genotype")
+
+(plt<-ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change))+geom_point(size=.5,alpha=.9)+theme_bw() +xlab("predicted probability gene is pro-longevity") +ylab("change in replicative lifespan after knockout") +geom_smooth(color="blue",size=.5,se=FALSE)+facet_wrap(~ga))
+#(plt2<-ggExtra::ggMarginal(plt,type="histogram",fill="white",bins=100))
+ggsave("./results/auto/plots/probs_vs_rls.pdf",width=7,height=4)
 ```
 
 extract out the top ten pro and anti-longevity genes that were not in genage
@@ -143,9 +163,29 @@ for(sp in species){
   colnames(ginfo)[colnames(ginfo)=="external_gene_name"]<-"gene"
   ginfo$gene<-toupper(ginfo$gene)
   res<-merge(res,ginfo,by="gene",sort=FALSE)
-  ofile<-file.path("./results/auto",paste0("topgenes_",sp,".csv"))
+  ofile<-fp(tp,paste0("topgenes_",sp,".csv"))
   #write.table(res,file=ofile,quote=FALSE,row.names=FALSE)
   write.csv(res,file=ofile,row.names=FALSE)
 }
-a<-read.csv(file.path("./results/auto",paste0("topgenes_yeast.csv")))
+```
+
+reformat tables for manuscript
+
+```{r}
+for(sp in c("worm","yeast")){
+  d<-read.csv(fp(tp,paste0("topgenes_",sp,".csv")))
+  for(ae in c("pro","anti")){
+    d2<-subset(d,aging_effect==paste0(ae,"_longevity"))
+    d2<-d2[,c("gene","predicted_probability","ensembl_gene_id","description")]
+    colnames(d2)<-c("Gene","Prob","ID","Description")
+    if(sp=="yeast"){
+      z<-strsplit(as.character(d2$Description),"; ",fixed=TRUE)
+      d2$Description<-vapply(z,function(x){ifelse(length(x)>0,x[1],"")},FUN.VALUE="")
+    }
+    d2$Description<-gsub("\\s+?\\[Source:.*","",d2$Description,perl=TRUE)
+    d2$Description<-gsub("Major sperm protein.*","Major sperm protein",d2$Description,perl=TRUE)
+    ofile<-fp(tp,paste0("topgenes_",sp,"_",ae,"_longevity.csv"))
+    write.csv(d2,file=ofile,row.names=FALSE,quote=FALSE)
+  }
+}
 ```

@@ -1,0 +1,11 @@
+Gene,Prob,ID,Description
+RPS30B,1,YOR182C,Protein component of the small (40S) ribosomal subunit
+TMA23,1,YMR269W,Nucleolar protein implicated in ribosome biogenesis
+URA3,1,YEL021W,Orotidine-5'-phosphate (OMP) decarboxylase
+RPS29B,0.999,YDL061C,Protein component of the small (40S) ribosomal subunit
+RLP24,0.999,YLR009W,Essential protein required for ribosomal large subunit biogenesis
+COX9,0.999,YDL067C,Subunit VIIa of cytochrome c oxidase (Complex IV)
+HOR7,0.999,YMR251W-A,Protein of unknown function
+TOM7,0.999,YNL070W,Component of the TOM (translocase of outer membrane) complex
+MFA1,0.999,YDR461W,Mating pheromone a-factor
+TAR1,0.999,YLR154W-C,Protein potentially involved in regulation of respiratory metabolism
