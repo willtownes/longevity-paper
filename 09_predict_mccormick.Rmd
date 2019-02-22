@@ -13,7 +13,11 @@ library(ggplot2)
 source("./util.R") #loads dplyr and Matrix
 fp<-file.path
 bp<-"./results/auto"
-tp<-"./results/auto/tables"
+pp<-fp(bp,"plots")
+if(!dir.exists(pp)){
+  dir.create(pp,recursive=TRUE)
+}
+tp<-fp(bp,"tables")
 if(!dir.exists(tp)){
   dir.create(tp,recursive=TRUE)
 }
@@ -110,7 +114,7 @@ for(sp in species){
     res
   }
   preds<-rbind(g(fit,"train"),g(fit,"test"))
-  ofile<-file.path("./results/auto",paste0("final_preds_",sp,".txt"))
+  ofile<-fp(bp,paste0("final_preds_",sp,".txt"))
   write.table(preds,file=ofile,quote=FALSE,row.names=FALSE)
 }
 ```
@@ -126,7 +130,7 @@ pd<-rbind(worm,yeast)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 ggplot(pd,aes(x=prob_pro_longevity))+geom_histogram(color="black",fill="white")+facet_grid(ga~species,scales="free_y")+theme_bw()+xlab("predicted probability gene is pro-longevity")+expand_limits(x=c(0,1))
-ggsave("./results/auto/plots/final_preds_hist.pdf",width=5,height=5)
+ggsave(fp(pp,"final_preds_hist.pdf"),width=5,height=5)
 ```
 
 Compare pro-longevity probability with replicative lifespan from McCormick (yeast only)
@@ -138,7 +142,20 @@ pd2<-merge(subset(pd,species=="yeast"),sv,by.x="gene",by.y="set_genotype")
 
 (plt<-ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change))+geom_point(size=.5,alpha=.9)+theme_bw() +xlab("predicted probability gene is pro-longevity") +ylab("change in replicative lifespan after knockout") +geom_smooth(color="blue",size=.5,se=FALSE)+facet_wrap(~ga))
 #(plt2<-ggExtra::ggMarginal(plt,type="histogram",fill="white",bins=100))
-ggsave("./results/auto/plots/probs_vs_rls.pdf",width=7,height=4)
+ggsave(fp(pp,"probs_vs_rls.pdf"),width=7,height=4)
+
+#same plot but focus only on top 20 and bottom 20 genes
+f<-function(d,G=20){
+  o<-order(d$prob_pro_longevity)
+  d<-d[o,]
+  d$effect<-"pro-longevity"
+  d$effect[1:G]<-"anti-longevity"
+  rbind(head(d,G),tail(d,G))
+}
+pd3<-rbind(f(subset(pd2,ga=="genage")),f(subset(pd2,ga=="non-genage")))
+colnames(pd3)[colnames(pd3)=="prob_pro_longevity"]<-"prob"
+ggplot(pd3,aes(x=effect,y=lifespan_change,colour=prob))+geom_jitter(width=.2,size=3)+facet_wrap(~ga)+theme_bw()+scale_colour_continuous(low="red",high="blue")+xlab("predicted effect")+ylab("change in replicative lifespan after knockout")
+ggsave(fp(pp,"probs_vs_rls_G20.pdf"),width=7,height=4)
 ```
 
 extract out the top ten pro and anti-longevity genes that were not in genage
