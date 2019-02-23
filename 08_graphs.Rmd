@@ -10,7 +10,8 @@ library(tidyverse)
 source("./carets.R")
 sp<-TRUE #save plots?
 fp<-file.path
-pth<-"./results/auto/plots"
+bp<-"./results/auto"
+pth<-fp(bp,"plots")
 if(!dir.exists(pth)){
   dir.create(pth,recursive=TRUE)
 }
@@ -19,9 +20,19 @@ ggs<-function(plt,w=6,h=4){
 }
 ```
 
+Get list of hyperparameters for each algorithm
+
+```{r}
+x<-readRDS(fp(bp,"yeast/go/carets1.rds"))
+res<-lapply(x,function(t){t$results[,1:(ncol(t$results)-4)]})
+y<-readRDS(fp(bp,"worm/archs4/carets2.rds"))
+res2<-lapply(y,function(t){t$results[,1:(ncol(t$results)-4)]})
+res_tree<-lapply(res$xgbTree,unique)
+res2_tree<-lapply(res$xgbTree,unique)
+```
+
 ```{r}
 #load all ROC results
-bp<-"./results/auto"
 species<-c("worm","yeast")
 fts<-c("go","archs4","gxp","go_archs4","go_gxp")
 atlas<-expand.grid(features=fts,species=species,cv_folds=1:5,stringsAsFactors=FALSE)

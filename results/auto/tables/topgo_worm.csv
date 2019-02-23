@@ -1,0 +1,21 @@
+ID,Effect,Type,Description
+GO:0006412,-0.98,BP,translation
+GO:0005634,0.89,CC,nucleus
+GO:0015031,0.82,BP,protein transport
+GO:0005789,0.77,CC,endoplasmic reticulum membrane
+GO:0005840,-0.73,CC,ribosome
+GO:0009792,0.68,BP,embryo development ending in birth or egg hatching
+GO:0006511,0.66,BP,ubiquitin-dependent protein catabolic process
+GO:0009408,0.66,BP,response to heat
+GO:0043005,0.65,CC,neuron projection
+GO:0030150,0.6,BP,protein import into mitochondrial matrix
+GO:0055120,-0.6,CC,striated muscle dense body
+GO:0005783,0.6,CC,endoplasmic reticulum
+GO:0046872,-0.53,MF,metal ion binding
+GO:0005739,-0.52,CC,mitochondrion
+GO:0006281,-0.52,BP,DNA repair
+GO:0035556,-0.52,BP,intracellular signal transduction
+GO:0045893,0.52,BP,positive regulation of transcription; DNA-templated
+GO:0008289,0.52,MF,lipid binding
+GO:0048477,0.5,BP,oogenesis
+GO:0003824,0.49,MF,catalytic activity
