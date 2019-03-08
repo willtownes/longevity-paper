@@ -159,7 +159,39 @@ pd3<-rbind(f(subset(pd2,ga=="genage")),f(subset(pd2,ga=="non-genage")))
 colnames(pd3)[colnames(pd3)=="prob_pro_longevity"]<-"prob"
 ggplot(pd3,aes(x=effect,y=lifespan_change,colour=prob))+geom_jitter(width=.2,size=3)+facet_wrap(~ga)+theme_bw()+scale_colour_continuous(low="red",high="blue")+xlab("predicted effect")+ylab("change in replicative lifespan after knockout")
 ggsave(fp(pp,"probs_vs_rls_G20.pdf"),width=7,height=4)
+
+#t-test for genage and non-genage
+t.test(lifespan_change~effect,subset(pd3,ga=="genage"),alternative="greater")#,var.equal=TRUE)
+t.test(lifespan_change~effect,subset(pd3,ga=="non-genage"),alternative="greater")#,var.equal=TRUE)
 ```
+
+I did one-sided t-tests since it has more power and we would never expect knocking out the pro-longevity genes to increase lifespan. If you like I can also do the two-sided tests. I did not assume the two groups have equal variance. The conclusion is, knocking out predicted anti-longevity genes in yeast significantly increases the replicative lifespan change (relative to control) compared to knocking out predicted pro-longevity genes. The level of confidence is much higher for genage genes compared to non-genage genes.
+
+```
+# genage genes
+	Welch Two Sample t-test
+
+data:  lifespan_change by effect
+t = 5.0313, df = 35.094, p-value = 7.251e-06
+alternative hypothesis: true difference in means is greater than 0
+95 percent confidence interval:
+ 6.869778      Inf
+sample estimates:
+mean in group anti-longevity  mean in group pro-longevity 
+                    3.824407                    -6.518328 
+# non-genage genes                    
+	Welch Two Sample t-test
+
+data:  lifespan_change by effect
+t = 2.0046, df = 36.721, p-value = 0.02621
+alternative hypothesis: true difference in means is greater than 0
+95 percent confidence interval:
+ 0.4100382       Inf
+sample estimates:
+mean in group anti-longevity  mean in group pro-longevity 
+                   0.7187705                   -1.8726971               
+```
+
 
 extract out the top ten pro and anti-longevity genes that were not in genage
 
