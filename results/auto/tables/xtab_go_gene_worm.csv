@@ -1,0 +1,58 @@
+go_id,gene,prediction,ONTOLOGY,TERM
+GO:0000166,F44E5.4,pro_longevity,MF,nucleotide binding
+GO:0000166,F44E5.5,pro_longevity,MF,nucleotide binding
+GO:0003677,CEH-13,pro_longevity,MF,DNA binding
+GO:0003677,HIL-7,pro_longevity,MF,DNA binding
+GO:0003735,RPL-34,anti_longevity,MF,structural constituent of ribosome
+GO:0003735,RPL-39,anti_longevity,MF,structural constituent of ribosome
+GO:0003735,RPL-11.1,anti_longevity,MF,structural constituent of ribosome
+GO:0004364,GST-1,pro_longevity,MF,glutathione transferase activity
+GO:0005515,GST-1,pro_longevity,MF,protein binding
+GO:0005515,F20C5.6,pro_longevity,MF,protein binding
+GO:0005524,F44E5.4,pro_longevity,MF,ATP binding
+GO:0005524,F44E5.5,pro_longevity,MF,ATP binding
+GO:0005576,LPR-3,pro_longevity,CC,extracellular region
+GO:0005622,RPL-34,anti_longevity,CC,intracellular
+GO:0005622,RPL-39,anti_longevity,CC,intracellular
+GO:0005622,RPL-11.1,anti_longevity,CC,intracellular
+GO:0005634,CEH-13,pro_longevity,CC,nucleus
+GO:0005737,CEH-13,pro_longevity,CC,cytoplasm
+GO:0005737,MSP-59,anti_longevity,CC,cytoplasm
+GO:0005737,MSP-113,anti_longevity,CC,cytoplasm
+GO:0005737,MSP-81,anti_longevity,CC,cytoplasm
+GO:0005737,MSP-57,anti_longevity,CC,cytoplasm
+GO:0005737,MSP-19,anti_longevity,CC,cytoplasm
+GO:0005737,TTH-1,pro_longevity,CC,cytoplasm
+GO:0005783,W04A8.4,pro_longevity,CC,endoplasmic reticulum
+GO:0005829,TTH-1,pro_longevity,CC,cytosol
+GO:0005840,RPL-34,anti_longevity,CC,ribosome
+GO:0005840,RPL-39,anti_longevity,CC,ribosome
+GO:0005840,RPL-11.1,anti_longevity,CC,ribosome
+GO:0005856,MSP-59,anti_longevity,CC,cytoskeleton
+GO:0005856,MSP-57,anti_longevity,CC,cytoskeleton
+GO:0005856,TTH-1,pro_longevity,CC,cytoskeleton
+GO:0005856,MSP-81,anti_longevity,CC,cytoskeleton
+GO:0005856,MSP-113,anti_longevity,CC,cytoskeleton
+GO:0005856,MSP-19,anti_longevity,CC,cytoskeleton
+GO:0005856,Y59E9AR.7,anti_longevity,CC,cytoskeleton
+GO:0006355,CEH-13,pro_longevity,BP,regulation of transcription, DNA-templated
+GO:0006412,RPL-34,anti_longevity,BP,translation
+GO:0006412,RPL-39,anti_longevity,BP,translation
+GO:0006412,RPL-11.1,anti_longevity,BP,translation
+GO:0007218,NLP-27,anti_longevity,BP,neuropeptide signaling pathway
+GO:0007275,CEH-13,pro_longevity,BP,multicellular organism development
+GO:0008152,GST-1,pro_longevity,BP,metabolic process
+GO:0009792,CEH-13,pro_longevity,BP,embryo development ending in birth or egg hatching
+GO:0016020,NLP-27,anti_longevity,CC,membrane
+GO:0016740,GST-1,pro_longevity,MF,transferase activity
+GO:0030054,TTH-1,pro_longevity,CC,cell junction
+GO:0030529,RPL-11.1,anti_longevity,NA,NA
+GO:0030529,RPL-39,anti_longevity,NA,NA
+GO:0042995,MSP-81,anti_longevity,CC,cell projection
+GO:0042995,MSP-19,anti_longevity,CC,cell projection
+GO:0042995,MSP-59,anti_longevity,CC,cell projection
+GO:0042995,MSP-113,anti_longevity,CC,cell projection
+GO:0042995,MSP-57,anti_longevity,CC,cell projection
+GO:0043565,CEH-13,pro_longevity,MF,sequence-specific DNA binding
+GO:0045087,GST-1,pro_longevity,BP,innate immune response
+GO:0090305,W04A8.4,pro_longevity,BP,nucleic acid phosphodiester bond hydrolysis

@@ -1,21 +1,21 @@
-ID,Effect,Type,Description
-GO:0001302,1.8,BP,replicative cell aging
-GO:0006915,0.87,BP,apoptotic process
-GO:0016020,-0.82,CC,membrane
-GO:0005634,0.73,CC,nucleus
-GO:0000183,0.72,BP,chromatin silencing at rDNA
-GO:0005624,0.71,NA,NA
-GO:0007049,0.67,BP,cell cycle
-GO:0005739,0.64,CC,mitochondrion
-GO:0005515,-0.64,MF,protein binding
-GO:0003824,0.61,MF,catalytic activity
-GO:0031307,0.56,CC,integral component of mitochondrial outer membrane
-GO:0000723,0.55,BP,telomere maintenance
-GO:0005758,0.53,CC,mitochondrial intermembrane space
-GO:0055085,0.53,BP,transmembrane transport
-GO:0017111,0.52,MF,nucleoside-triphosphatase activity
-GO:0006811,0.51,BP,ion transport
-GO:0006281,0.5,BP,DNA repair
-GO:0034599,0.48,BP,cellular response to oxidative stress
-GO:0008270,-0.48,MF,zinc ion binding
-GO:0045861,0.47,BP,negative regulation of proteolysis
+ID,logOR,OR,Type,Description
+GO:0001302,1.8,5.8,BP,replicative cell aging
+GO:0006915,0.87,2.4,BP,apoptotic process
+GO:0016020,-0.82,0.44,CC,membrane
+GO:0005634,0.73,2.1,CC,nucleus
+GO:0000183,0.72,2.1,BP,chromatin silencing at rDNA
+GO:0005624,0.71,2,CC,membrane fraction
+GO:0007049,0.67,1.9,BP,cell cycle
+GO:0005739,0.64,1.9,CC,mitochondrion
+GO:0005515,-0.64,0.53,MF,protein binding
+GO:0003824,0.61,1.8,MF,catalytic activity
+GO:0031307,0.56,1.7,CC,integral component of mitochondrial outer membrane
+GO:0000723,0.55,1.7,BP,telomere maintenance
+GO:0005758,0.53,1.7,CC,mitochondrial intermembrane space
+GO:0055085,0.53,1.7,BP,transmembrane transport
+GO:0017111,0.52,1.7,MF,nucleoside-triphosphatase activity
+GO:0006811,0.51,1.7,BP,ion transport
+GO:0006281,0.5,1.7,BP,DNA repair
+GO:0034599,0.48,1.6,BP,cellular response to oxidative stress
+GO:0008270,-0.48,0.62,MF,zinc ion binding
+GO:0045861,0.47,1.6,BP,negative regulation of proteolysis

@@ -1,0 +1,87 @@
+go_id,gene,prediction,ONTOLOGY,TERM
+GO:0000502,UBC5,pro_longevity,CC,proteasome complex
+GO:0002181,RPS29B,anti_longevity,BP,cytoplasmic translation
+GO:0002181,RPS30B,anti_longevity,BP,cytoplasmic translation
+GO:0003677,ETR1,pro_longevity,MF,DNA binding
+GO:0003735,RPS30B,anti_longevity,MF,structural constituent of ribosome
+GO:0003735,RPS29B,anti_longevity,MF,structural constituent of ribosome
+GO:0003824,URA3,anti_longevity,MF,catalytic activity
+GO:0003824,ACS1,pro_longevity,MF,catalytic activity
+GO:0003987,ACS1,pro_longevity,MF,acetate-CoA ligase activity
+GO:0004842,UBC5,pro_longevity,MF,ubiquitin-protein transferase activity
+GO:0005515,UBI4,pro_longevity,MF,protein binding
+GO:0005524,ACS1,pro_longevity,MF,ATP binding
+GO:0005524,UBC5,pro_longevity,MF,ATP binding
+GO:0005576,MFA1,anti_longevity,CC,extracellular region
+GO:0005622,RPS29B,anti_longevity,CC,intracellular
+GO:0005622,RPS30B,anti_longevity,CC,intracellular
+GO:0005625,MFA1,anti_longevity,NA,NA
+GO:0005625,URA3,anti_longevity,NA,NA
+GO:0005634,UBI4,pro_longevity,CC,nucleus
+GO:0005634,ACS1,pro_longevity,CC,nucleus
+GO:0005634,SBA1,pro_longevity,CC,nucleus
+GO:0005634,PRE7,pro_longevity,CC,nucleus
+GO:0005634,PRE3,pro_longevity,CC,nucleus
+GO:0005737,UBI4,pro_longevity,CC,cytoplasm
+GO:0005737,RLP24,anti_longevity,CC,cytoplasm
+GO:0005737,ACS1,pro_longevity,CC,cytoplasm
+GO:0005737,SBA1,pro_longevity,CC,cytoplasm
+GO:0005739,TAR1,anti_longevity,CC,mitochondrion
+GO:0005739,COX9,anti_longevity,CC,mitochondrion
+GO:0005739,POR1,pro_longevity,CC,mitochondrion
+GO:0005739,ACS1,pro_longevity,CC,mitochondrion
+GO:0005739,ETR1,pro_longevity,CC,mitochondrion
+GO:0005741,TOM7,anti_longevity,CC,mitochondrial outer membrane
+GO:0005741,POR1,pro_longevity,CC,mitochondrial outer membrane
+GO:0005743,COX9,anti_longevity,CC,mitochondrial inner membrane
+GO:0005758,POR1,pro_longevity,CC,mitochondrial intermembrane space
+GO:0005759,ETR1,pro_longevity,CC,mitochondrial matrix
+GO:0005768,HSP12,pro_longevity,CC,endosome
+GO:0005783,ACS1,pro_longevity,CC,endoplasmic reticulum
+GO:0005783,PDI1,pro_longevity,CC,endoplasmic reticulum
+GO:0005789,PRE3,pro_longevity,CC,endoplasmic reticulum membrane
+GO:0005789,PRE7,pro_longevity,CC,endoplasmic reticulum membrane
+GO:0005829,URA3,anti_longevity,CC,cytosol
+GO:0005829,ACS1,pro_longevity,CC,cytosol
+GO:0005829,HSP12,pro_longevity,CC,cytosol
+GO:0005840,RPS30B,anti_longevity,CC,ribosome
+GO:0005840,RPS29B,anti_longevity,CC,ribosome
+GO:0005886,HSP12,pro_longevity,CC,plasma membrane
+GO:0005886,HOR7,anti_longevity,CC,plasma membrane
+GO:0005886,MFA1,anti_longevity,CC,plasma membrane
+GO:0006085,ACS1,pro_longevity,BP,acetyl-CoA biosynthetic process
+GO:0006281,UBI4,pro_longevity,BP,DNA repair
+GO:0006412,RPS30B,anti_longevity,BP,translation
+GO:0006412,RPS29B,anti_longevity,BP,translation
+GO:0006457,SBA1,pro_longevity,BP,protein folding
+GO:0006457,PDI1,pro_longevity,BP,protein folding
+GO:0006811,POR1,pro_longevity,BP,ion transport
+GO:0006915,POR1,pro_longevity,BP,apoptotic process
+GO:0006950,HSP12,pro_longevity,BP,response to stress
+GO:0006950,UBI4,pro_longevity,BP,response to stress
+GO:0006950,UBC5,pro_longevity,BP,response to stress
+GO:0006974,UBI4,pro_longevity,BP,cellular response to DNA damage stimulus
+GO:0007005,POR1,pro_longevity,BP,mitochondrion organization
+GO:0008270,ETR1,pro_longevity,MF,zinc ion binding
+GO:0008289,HSP12,pro_longevity,MF,lipid binding
+GO:0009060,ETR1,pro_longevity,BP,aerobic respiration
+GO:0016020,COX9,anti_longevity,CC,membrane
+GO:0016020,MFA1,anti_longevity,CC,membrane
+GO:0016208,ACS1,pro_longevity,MF,AMP binding
+GO:0016491,ETR1,pro_longevity,MF,oxidoreductase activity
+GO:0016491,COX9,anti_longevity,MF,oxidoreductase activity
+GO:0016567,UBI4,pro_longevity,BP,protein ubiquitination
+GO:0016567,UBC5,pro_longevity,BP,protein ubiquitination
+GO:0016880,ACS1,pro_longevity,MF,acid-ammonia (or amide) ligase activity
+GO:0019427,ACS1,pro_longevity,BP,acetyl-CoA biosynthetic process from acetate
+GO:0030687,RLP24,anti_longevity,CC,preribosome, large subunit precursor
+GO:0031307,POR1,pro_longevity,CC,integral component of mitochondrial outer membrane
+GO:0034599,HSP12,pro_longevity,BP,cellular response to oxidative stress
+GO:0034605,UBC5,pro_longevity,BP,cellular response to heat
+GO:0034605,HSP12,pro_longevity,BP,cellular response to heat
+GO:0043457,TAR1,anti_longevity,BP,regulation of cellular respiration
+GO:0046872,RPS29B,anti_longevity,MF,metal ion binding
+GO:0055085,POR1,pro_longevity,BP,transmembrane transport
+GO:0055114,PDI1,pro_longevity,BP,oxidation-reduction process
+GO:0055114,COX9,anti_longevity,BP,oxidation-reduction process
+GO:0055114,ETR1,pro_longevity,BP,oxidation-reduction process

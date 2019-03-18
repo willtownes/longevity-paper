@@ -1,0 +1,95 @@
+---
+title: "GO GXP McCormick"
+author: "Will Townes"
+date: "11/14/2018"
+output: html_document
+---
+
+Comparing model prediction of pro-longevity vs observed change in RLS for McCormick data.
+
+```{r}
+library(ggplot2)
+theme_set(theme_bw())
+source("./util.R") #loads dplyr and Matrix
+fp<-file.path
+bp<-"./results/auto"
+pp<-fp(bp,"plots")
+if(!dir.exists(pp)){
+  dir.create(pp,recursive=TRUE)
+}
+```
+
+Compare pro-longevity probability with replicative lifespan from McCormick (yeast only)
+
+```{r}
+pd<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+pd$ga<-"non-genage"
+pd$ga[pd$genage_annotated]<-"genage"
+sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
+sv<-subset(sv,numgenes==1)
+pd2<-merge(pd,sv,by.x="gene",by.y="set_genotype")
+ga<-load_genage("yeast")
+pd2<-merge(pd2,ga,by.x="gene",by.y="symbol",all.x=TRUE)
+colnames(pd2)[colnames(pd2)=="pro_longevity"]<-"gacat"
+pd2$gacat[is.na(pd2$gacat)]<-"unannotated"
+pd2$gacat[pd2$gacat==0]<-"anti-longevity"
+pd2$gacat[pd2$gacat==1]<-"pro-longevity"
+pd2$gacat<-factor(pd2$gacat)
+colnames(pd2)[colnames(pd2)=="gacat"]<-"genage_category"
+
+ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change,colour=genage_category)) +geom_point(alpha=.9) +xlab("predicted probability gene is pro-longevity") +ylab("change in replicative lifespan after knockout") +geom_smooth(color="black",size=.5,se=FALSE) +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
+ggsave(fp(pp,"probs_vs_rls.pdf"),width=7,height=4)
+
+#same plot but focus only on top 20 and bottom 20 genes
+f<-function(d,G=20){
+  o<-order(d$prob_pro_longevity)
+  d<-d[o,]
+  d$effect<-"pro-longevity"
+  d$effect[1:G]<-"anti-longevity"
+  rbind(head(d,G),tail(d,G))
+}
+pd3<-rbind(f(subset(pd2,ga=="genage")),f(subset(pd2,ga=="non-genage")))
+colnames(pd3)[colnames(pd3)=="prob_pro_longevity"]<-"prob"
+ggplot(pd3,aes(x=effect,y=lifespan_change,colour=prob))+geom_jitter(width=.2,size=3)+facet_wrap(~ga)+theme_bw()+scale_colour_continuous(low="red",high="blue")+xlab("predicted effect")+ylab("change in replicative lifespan after knockout")
+ggsave(fp(pp,"probs_vs_rls_G20.pdf"),width=7,height=4)
+
+#t-test for genage and non-genage
+t.test(lifespan_change~effect,subset(pd3,ga=="genage"),alternative="greater")#,var.equal=TRUE)
+t.test(lifespan_change~effect,subset(pd3,ga=="non-genage"),alternative="greater")#,var.equal=TRUE)
+```
+
+I did one-sided t-tests since it has more power and we would never expect knocking out the pro-longevity genes to increase lifespan. If you like I can also do the two-sided tests. I did not assume the two groups have equal variance. The conclusion is, knocking out predicted anti-longevity genes in yeast significantly increases the replicative lifespan change (relative to control) compared to knocking out predicted pro-longevity genes. The level of confidence is much higher for genage genes compared to non-genage genes.
+
+```
+# genage genes
+	Welch Two Sample t-test
+
+data:  lifespan_change by effect
+t = 5.0313, df = 35.094, p-value = 7.251e-06
+alternative hypothesis: true difference in means is greater than 0
+95 percent confidence interval:
+ 6.869778      Inf
+sample estimates:
+mean in group anti-longevity  mean in group pro-longevity 
+                    3.824407                    -6.518328 
+# non-genage genes                    
+	Welch Two Sample t-test
+
+data:  lifespan_change by effect
+t = 2.0046, df = 36.721, p-value = 0.02621
+alternative hypothesis: true difference in means is greater than 0
+95 percent confidence interval:
+ 0.4100382       Inf
+sample estimates:
+mean in group anti-longevity  mean in group pro-longevity 
+                   0.7187705                   -1.8726971               
+```
+
+Appears to be disagreement between our results and McCormick. See if McCormick also disagrees with genage categories.
+
+```{r}
+pd4<-subset(pd2,ga=="genage")
+#colnames(pd4)[colnames(pd4)=="prob_pro_longevity"]<-"prob"
+ggplot(pd4,aes(x=genage_category,y=lifespan_change))+geom_boxplot()+geom_jitter(width=.1,alpha=.5)+ylab("change in replicative lifespan after knockout")+xlab("genage annotation")+geom_hline(yintercept=0,linetype="dotted")
+ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
+```
