@@ -48,7 +48,7 @@ load_data<-function(sp,ft,fld){
 pd<-do.call(rbind,mapply(load_data,atlas$species,atlas$features,atlas$cv_folds,SIMPLIFY=FALSE))
 rownames(pd)<-NULL
 auc0<-pd %>% group_by(species,features,alg,fold,cv_fold) %>% summarize(auc=roc2auc(fpr,tpr))
-#auc0$alg<-plyr::mapvalues(auc0$alg,from=c("glmnet","svmRadialSigma","xgbTree","naive_bayes","kknn"),to=c("pglm","svm","xgb","nb","knn"))
+auc0$alg<-plyr::mapvalues(auc0$alg,from=c("glmnet","svmRadialSigma","xgbTree","naive_bayes","kknn"),to=c("pglm","svm","xgb","nb","knn"))
 colnames(auc0)[colnames(auc0)=="alg"]<-"algorithms"
 auc<-subset(auc0,fold=="test")
 auc$features<-factor(auc$features,levels=c("archs4","gxp","go","go_archs4","go_gxp"),ordered=TRUE)
@@ -81,14 +81,14 @@ overall summary of all results
 
 ```{r}
 cbb<-c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7","#F0E442","#000000")
-ggplot(auc,aes(x=algorithms,y=auc,fill=features,colour=features))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb)+scale_colour_manual(values=cbb)+ylab("area under ROC")+theme(axis.text.x=element_text(angle = 30, hjust = 1))
+ggplot(auc,aes(x=algorithms,y=auc,fill=features,colour=features))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb)+scale_colour_manual(values=cbb)+ylab("area under ROC")#+theme(axis.text.x=element_text(angle = 30, hjust = 1))
 ggs("auc_all_xalg.pdf")
 ggplot(auc,aes(x=features,y=auc,fill=algorithms,colour=algorithms))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb)+scale_colour_manual(values=cbb)+ylab("area under ROC")+theme(axis.text.x=element_text(angle = 30, hjust = 1))
 ggs("auc_all_xfeat.pdf")
 
 #subset on best performing algorithms only
-auc2<-subset(auc,algorithms %in% c("svmRadialSigma","glmnet"))
-auc2$algorithms<-factor(auc2$algorithms,levels=c("glmnet","svmRadialSigma"))
+auc2<-subset(auc,algorithms %in% c("svm","pglm"))
+auc2$algorithms<-factor(auc2$algorithms,levels=c("pglm","svm"))
 ggplot(auc2,aes(x=features,y=auc,fill=algorithms,colour=algorithms))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb[5:4])+scale_colour_manual(values=cbb[5:4])+ylab("area under ROC")+theme(axis.text.x=element_text(angle = 30, hjust = 1),legend.position="top")
 ggs("auc_svm_pglm.pdf")
 ```
