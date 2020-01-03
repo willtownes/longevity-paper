@@ -104,4 +104,19 @@ ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
 ## Marek & Korona 2013
 
 ```{r}
+pd<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+pd$ga<-"non-genage"
+pd$ga[pd$genage_annotated]<-"genage"
+sv<-read.table("data/marek_korona_deletion_cleaned.txt",header=TRUE,stringsAsFactors=FALSE)
+pd2<-merge(pd,sv,by="gene")
+ga<-load_genage("yeast")
+pd2<-merge(pd2,ga,by.x="gene",by.y="symbol",all.x=TRUE)
+colnames(pd2)[colnames(pd2)=="pro_longevity"]<-"gacat"
+pd2$gacat[is.na(pd2$gacat)]<-"unannotated"
+pd2$gacat[pd2$gacat==0]<-"anti-longevity"
+pd2$gacat[pd2$gacat==1]<-"pro-longevity"
+pd2$gacat<-factor(pd2$gacat)
+colnames(pd2)[colnames(pd2)=="gacat"]<-"genage_category"
+
+ggplot(pd2,aes(x=prob_pro_longevity,y=max_lifespan_position_corrected,colour=genage_category)) +geom_point(alpha=.9) +xlab("predicted probability gene is pro-longevity") +ylab("maximum lifespan in deletion strain") +geom_smooth(color="black",size=.5,se=FALSE) +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
 ```
