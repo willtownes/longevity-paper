@@ -1,13 +1,14 @@
 ---
 title: "Downloading and Organizing all Datasets"
 author: "Will Townes"
-date: "10/03/2018"
+date: "01/03/2020"
 output: html_document
 ---
 
 ```{r}
 library(SingleCellExperiment) #also loads SummarizedExperiment
 library(biomaRt)
+#library(tidyverse)
 source("./util.R") #loads dplyr and Matrix
 fp<-file.path
 #which mutants to use from yeast deleteome?
@@ -368,4 +369,41 @@ d<-d %>% select(-c(set_lifespans,ref_lifespans))
 d<-d %>% mutate(numgenes=ngenes_per_perturbation(set_genotype))
 d %>% subset(set_genotype=="LOS1") #should be about +7
 write.csv(as.data.frame(d),file="data/mccormick_all.csv",row.names=FALSE)
+```
+
+## Marek & Korona 2013 yeast data
+
+Download the supplemental tables S3 and S4 from https://onlinelibrary.wiley.com/doi/full/10.1111/evo.12196 into the data subfolder of this repository. Save table S3 as `data/marek_korona_S3_deletion_max_lifespan.xls` and table S4 as `data/marek_korona_S4_control_max_lifespan.xls`.
+
+```
+pushd data
+wget -O marek_korona.zip https://onlinelibrary.wiley.com/action/downloadSupplement?doi=10.1111%2Fevo.12196
+unzip marek_korona.zip -d mk
+rm marek_korona.zip
+mv mk/evo12196-sup-0003-tables3.xls marek_korona_S3_deletion_max_lifespan.xls
+mv mk/evo12196-sup-0004-tables4.xls marek_korona_S4_control_max_lifespan.xls
+rm mk/*
+rmdir mk
+popd
+```
+
+read excel files into R
+
+```{r}
+#library(readxl)
+x<-readxl::read_excel("data/marek_korona_S3_deletion_max_lifespan.xls")
+rmcols<-c(1,4,5,6,7,8,12,13)
+x<-x[,-rmcols]
+colnames(x)<-c("ORF","gene","r1","r2","r3")
+x<-x[-1,]
+x<-as.data
+x2<-tidyr::pivot_longer(x,c("r1","r2","r3"),names_to="replicate",values_to="max_lifespan_position_corrected")
+x2$max_lifespan_position_corrected<-as.numeric(x2$max_lifespan_position_corrected)
+write.table(x2,"data/marek_korona_deletion_cleaned.txt",row.names=FALSE,quote=FALSE)
+#control data, probably not going to use
+d<-readxl::read_excel("data/marek_korona_S4_control_max_lifespan.xls",skip=1)
+d<-d[,c(4,8,12)]
+colnames(d)<-paste0("r",1:3)
+d2<-tidyr::pivot_longer(d,everything(),names_to="replicate",values_to="max_lifespan_position_corrected",values_drop_na=TRUE)
+write.table(d2,"data/marek_korona_controls_cleaned.txt",row.names=FALSE,quote=FALSE)
 ```
