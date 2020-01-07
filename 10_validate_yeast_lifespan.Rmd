@@ -100,7 +100,6 @@ ggplot(pd4,aes(x=genage_category,y=lifespan_change))+geom_boxplot()+geom_jitter(
 ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
 ```
 
-
 ## Marek & Korona 2013
 
 ```{r}
@@ -119,4 +118,8 @@ pd2$gacat<-factor(pd2$gacat)
 colnames(pd2)[colnames(pd2)=="gacat"]<-"genage_category"
 
 ggplot(pd2,aes(x=prob_pro_longevity,y=max_lifespan_position_corrected,colour=genage_category)) +geom_point(alpha=.9) +xlab("predicted probability gene is pro-longevity") +ylab("maximum lifespan in deletion strain") +geom_smooth(color="black",size=.5,se=FALSE) +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
+ggsave(fp(pp,"probs_vs_lifespan_mk_raw.pdf"),width=7,height=4)
+
+ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change,colour=genage_category)) +geom_point(alpha=.9) +xlab("predicted probability gene is pro-longevity") +ylab("change in max lifespan in deletion strain vs control") +geom_smooth(color="black",size=.5,se=FALSE) +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
+ggsave(fp(pp,"probs_vs_lifespan_mk_adj.pdf"),width=7,height=4)
 ```
