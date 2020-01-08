@@ -120,7 +120,7 @@ for(sp in species){
     res
   }
   preds<-rbind(g(fit,"train"),g(fit,"test"))
-  ofile<-fp(bp,paste0("final_preds_",sp,".txt"))
+  ofile<-fp(bp,paste0("final_preds_go_gxp_",sp,".txt"))
   write.table(preds,file=ofile,quote=FALSE,row.names=FALSE)
 }
 ```
@@ -128,9 +128,9 @@ for(sp in species){
 For worm, the optimal alpha was .05 (mostly ridge regression). For yeast, the optimal alpha was 0.5 (even mix between ridge and lasso).
 
 ```{r}
-worm<-read.table("./results/auto/final_preds_worm.txt",header=TRUE)
+worm<-read.table("./results/auto/final_preds_go_gxp_worm.txt",header=TRUE)
 worm$species<-"worm"
-yeast<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+yeast<-read.table("./results/auto/final_preds_go_gxp_yeast.txt",header=TRUE)
 yeast$species<-"yeast"
 pd<-rbind(worm,yeast)
 pd$ga<-"non-genage"
@@ -243,7 +243,32 @@ for(sp in species){
 }
 ```
 
-For GO predictors only, the best CV was achieved with alpha=0.15 for worm and alpha=0.1 for yeast. We now extract the most informative predictors by thresholding the coefficients and reporting on the odds ratio scale
+For GO predictors only, the best CV was achieved with alpha=0.15 for worm and alpha=0.1 for yeast.
+
+```{r}
+#save predictions to tabular file
+for(sp in species){
+  print(sp)
+  dat<-load_data_go_only(sp)
+  fit<-readRDS(fp(bp,paste0("glmnet_fit_go_only_",sp,".rds")))
+  g<-function(fit,type=c("train","test")){
+    type<-match.arg(type)
+    if(type=="train"){
+      preds<-predict(fit,dat$Xtrn,type="response",s="lambda.min")
+    } else {
+      preds<-predict(fit,dat$Xtst,type="response",s="lambda.min")
+    }
+    res<-data.frame(gene=rownames(preds),prob_pro_longevity=preds[,1])
+    res$genage_annotated<-(type=="train")
+    res
+  }
+  preds<-rbind(g(fit,"train"),g(fit,"test"))
+  ofile<-fp(bp,paste0("final_preds_go_only_",sp,".txt"))
+  write.table(preds,file=ofile,quote=FALSE,row.names=FALSE)
+}
+```
+
+We now extract the most informative predictors by thresholding the coefficients and reporting on the odds ratio scale.
 
 ```{r}
 spp<-c("worm","yeast")
