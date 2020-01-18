@@ -57,24 +57,69 @@ auc$features<-factor(auc$features,levels=c("archs4","gxp","go","go_archs4","go_g
 pairwise comparison of all algorithms. Focusing only on test set AUC, for each combination of species, features set, and cross validation fold, rank the algorithms according to their AUC. Then, for each pairwise comparison of algorithms, compute the fraction of folds where one algorithm was superior to the other. Order the algorithms by the minimum of these proportions. The idea is that a consistently good algorithm is better than all other algorithms uniformly.
 
 ```{r}
-algs<-levels(auc$algorithms)
-pc<-spread(auc,algorithms,auc)
-rk<-t(apply(pc[,algs],1,rank))
-pc2<-matrix(0,nrow=length(algs),ncol=length(algs))
-rownames(pc2)<-colnames(pc2)<-algs
-for(i in seq_along(algs)){
-  for(j in seq_along(algs)){
-    #fraction of folds where 'i' was better than 'j'
-    pc2[i,j]<-mean(rk[,i]>rk[,j])
+alg_ranking<-function(auc){
+  #algs is a data frame with columns "algorithms" and "auc"
+  #creates a table with pairwise comparison of which algorithms
+  #had better performance across experimental conditions
+  algs<-levels(auc$algorithms)
+  pc<-spread(auc,algorithms,auc)
+  rk<-t(apply(pc[,algs],1,rank))
+  pc2<-matrix(0,nrow=length(algs),ncol=length(algs))
+  rownames(pc2)<-colnames(pc2)<-algs
+  for(i in seq_along(algs)){
+    for(j in seq_along(algs)){
+      #fraction of folds where 'i' was better than 'j'
+      pc2[i,j]<-mean(rk[,i]>rk[,j])
+    }
   }
+  o<-order(apply(pc2,1,function(t){min(t[t>0])}),decreasing=TRUE)
+  pc2[o,o]
 }
-o<-order(apply(pc2,1,function(t){min(t[t>0])}),decreasing=TRUE)
-pc2<-pc2[o,o]
-print(pc2)
+
+pc2<-alg_ranking(auc)
 write.table(pc2,file="./results/auto/alg_table.txt",quote=FALSE)
+
+pc2w<-alg_ranking(subset(auc,species=="worm"))  
+write.table(pc2w,file="./results/auto/alg_table_worm.txt",quote=FALSE)
+
+pc2y<-alg_ranking(subset(auc,species=="yeast"))  
+write.table(pc2y,file="./results/auto/alg_table_yeast.txt",quote=FALSE)
+
+print(pc2); print(pc2w); print(pc2y)
 
 #order levels of algs factor based on performance
 auc$algorithms<-factor(auc$algorithms,levels=rev(rownames(pc2)),ordered=TRUE)
+```
+
+what is the best combination of features and algorithm within each species?
+
+```{r}
+auc2<- auc %>% group_by(species,features,algorithms) %>% summarize(auc_lo=min(auc),auc_avg=mean(auc),auc_hi=max(auc))
+
+auc_worm<-subset(auc2,species=="worm")
+best_worm<-which.max(auc_worm$auc_avg)
+auc_worm[best_worm,]
+
+auc_yeast<-subset(auc2,species=="yeast")
+best_yeast<-which.max(auc_yeast$auc_avg)
+auc_yeast[best_yeast,]
+```
+
+Draw ROC for each species for best performing model (pglm with GO+ARCHS4 for worm, pglm with GO+GXP for yeast).
+
+```{r}
+#load full results not just presummarized AUC values
+f<-function(k,pth){
+  roc<-read.table(fp(pth,paste0("roc",k,".txt")),header=TRUE)
+  subset(roc,alg=="glmnet" & fold=="test")
+}
+roc_w<-do.call(rbind,lapply(as.list(1:5),f,pth=fp(bp,"worm/go_archs4")))
+roc_w$species<-"worm"
+roc_y<-do.call(rbind,lapply(as.list(1:5),f,pth=fp(bp,"yeast/go_gxp")))
+roc_y$species<-"yeast"
+roc<-rbind(roc_w,roc_y)
+ggplot(roc,aes(x=fpr,y=tpr,group=cv_fold))+geom_segment(x=0,y=0,xend=1,yend=1,linetype="dotted",colour="gray",size=.5)+geom_line()+xlab("false positive rate")+ylab("true positive rate")+facet_wrap(~species)
+ggs("roc_best.pdf")
 ```
 
 overall summary of all results
