@@ -28,7 +28,7 @@ Comparing model prediction of pro-longevity vs observed change in RLS for McCorm
 Compare pro-longevity probability with replicative lifespan from McCormick (yeast only)
 
 ```{r}
-pd<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+pd<-read.table("./results/auto/final_preds_go_gxp_yeast.txt",header=TRUE)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
@@ -103,7 +103,7 @@ ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
 ## Marek & Korona 2013
 
 ```{r}
-pd<-read.table("./results/auto/final_preds_yeast.txt",header=TRUE)
+pd<-read.table("./results/auto/final_preds_go_gxp_yeast.txt",header=TRUE)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 sv<-read.table("data/marek_korona_deletion_cleaned.txt",header=TRUE,stringsAsFactors=FALSE)
