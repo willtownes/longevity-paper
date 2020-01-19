@@ -1,0 +1,11 @@
+Gene,Prob,ID,Description
+SIR2,0.833,YDL042C,Conserved NAD+ dependent histone deacetylase of the Sirtuin family
+DNL4,0.774,YOR005C,DNA ligase required for nonhomologous end-joining (NHEJ)
+MCM5,0.753,YLR274W,Component of the Mcm2-7 hexameric helicase complex
+DOC1,0.702,YGL240W,Processivity factor
+POR1,0.7,YNL055C,Mitochondrial porin (voltage-dependent anion channel)
+NTG1,0.691,YAL015C,DNA N-glycosylase and apurinic/apyrimidinic (AP) lyase
+ESP1,0.648,YGR098C,Separase, a caspase-like cysteine protease
+OYE2,0.635,YHR179W,Conserved NADPH oxidoreductase containing flavin mononucleotide (FMN)
+EXO1,0.629,YOR033C,5'-3' exonuclease and flap-endonuclease
+MCD1,0.601,YDL003W,Essential alpha-kleisin subunit of the cohesin complex

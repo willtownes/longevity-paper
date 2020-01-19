@@ -1,0 +1,11 @@
+Gene,Prob,ID,Description
+VPS34,0.997,YLR240W,Phosphatidylinositol (PI) 3-kinase that synthesizes PI-3-phosphate
+VPS15,0.996,YBR097W,Serine/threonine protein kinase involved in vacuolar protein sorting
+AKR1,0.996,YDR264C,Palmitoyl transferase involved in protein palmitoylation
+AKR2,0.995,YOR034C,Ankyrin repeat-containing protein
+ENV7,0.995,YPL236C,Vacuolar membrane protein kinase
+RPL37A,0.994,YLR185W,Ribosomal 60S subunit protein L37A
+RPL43A,0.994,YPR043W,Ribosomal 60S subunit protein L43A
+RPS27A,0.993,YKL156W,Protein component of the small (40S) ribosomal subunit
+RPS27B,0.993,YHR021C,Protein component of the small (40S) ribosomal subunit
+RPS29A,0.993,YLR388W,Protein component of the small (40S) ribosomal subunit
