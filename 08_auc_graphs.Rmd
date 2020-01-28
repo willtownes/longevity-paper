@@ -7,6 +7,7 @@ output: html_document
 
 ```{r}
 library(tidyverse)
+library(pheatmap)
 theme_set(theme_bw())
 source("./carets.R")
 sp<-TRUE #save plots?
@@ -89,6 +90,13 @@ print(pc2); print(pc2w); print(pc2y)
 
 #order levels of algs factor based on performance
 auc$algorithms<-factor(auc$algorithms,levels=rev(rownames(pc2)),ordered=TRUE)
+```
+
+turn pairwise table into a plot
+
+```{r}
+pc2<-as.matrix(read.table("./results/auto/alg_table.txt",header=TRUE))
+pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE,filename="./results/auto/plots/alg_table_heatmap.pdf")
 ```
 
 what is the best combination of features and algorithm within each species?
