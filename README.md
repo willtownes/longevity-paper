@@ -1,10 +1,12 @@
-Automated Design of Experiments
+Identifying Longevity Associated Genes by Integrating Gene Expression and Curated Annotations
 ========
 Will Townes and Jeff Miller
 --------
 
-We are developing a method to facilitate automated design of experiments. 
+This is the supporting code to facilitate reproducible analysis of our manuscript. The following describes the contents of the repository:
 
-### Contact
+1. Rmarkdown files prefixed by numbers: these are the main workflows for the analyses we performed.
+2. carets.R and util.R contain convenience functions for running caret models, loading data, and other common tasks used by multiple Rmd files.
+3. the results folder contains all figures and tables.
 
-ftownes@g.harvard.edu
+Please contact `ftownes@princeton.edu` or file a github issue if you have questions.

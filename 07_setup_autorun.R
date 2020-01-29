@@ -29,8 +29,8 @@ dat2roc<-function(features,fold,dat,basedir,usecache=TRUE,verbose=TRUE){
   #dat is the list of all data
   #caches the list of fitted models (all algs) under <basedir>/<features>/carets.rds
   #writes the tpr and fpr (ROC) to <basedir>/<features>/roc.txt
-  #basedir is usually something like "./results/auto/yeast"
-  pth<-fp(basedir,features) #eg "./results/auto/yeast/go_gxp"
+  #basedir is usually something like "./results/yeast"
+  pth<-fp(basedir,features) #eg "./results/yeast/go_gxp"
   if(verbose){ print(paste(pth,"fold:",fold)) }
   mkdir_p(pth)
   cachepath<-fp(pth,paste0("carets",fold,".rds"))
@@ -65,11 +65,11 @@ master<-function(sp,ft,fold){
   #runs all algorithms for the species/features combo and saves to file
   sp<-as.character(sp); ft<-as.character(ft)
   dat<-readRDS(fp("./data/auto",paste0(sp,".rds")))
-  dat2roc(ft,fold,dat,fp("./results/auto",sp),usecache=TRUE,verbose=TRUE)
+  dat2roc(ft,fold,dat,fp("./results",sp),usecache=TRUE,verbose=TRUE)
 }
 
 species<-c("worm","yeast")
-for(sp in species){ mkdir_p(fp("./results/auto",sp)) }
+for(sp in species){ mkdir_p(fp("./results",sp)) }
 fts<-c("go","archs4","gxp","go_archs4","go_gxp")
 cv_folds<-1:5
 #yeast gxp is deleteome measured genes

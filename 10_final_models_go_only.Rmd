@@ -14,7 +14,7 @@ theme_set(theme_bw())
 library(GO.db)
 source("./util.R") #loads dplyr and Matrix
 fp<-file.path
-bp<-"./results/auto"
+bp<-"./results"
 pp<-fp(bp,"plots")
 if(!dir.exists(pp)){
   dir.create(pp,recursive=TRUE)

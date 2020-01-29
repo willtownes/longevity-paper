@@ -12,7 +12,7 @@ theme_set(theme_bw())
 source("./carets.R")
 sp<-TRUE #save plots?
 fp<-file.path
-bp<-"./results/auto"
+bp<-"./results"
 pth<-fp(bp,"plots")
 if(!dir.exists(pth)){
   dir.create(pth,recursive=TRUE)
@@ -78,13 +78,13 @@ alg_ranking<-function(auc){
 }
 
 pc2<-alg_ranking(auc)
-write.table(pc2,file="./results/auto/alg_table.txt",quote=FALSE)
+write.table(pc2,file="./results/alg_table.txt",quote=FALSE)
 
 pc2w<-alg_ranking(subset(auc,species=="worm"))  
-write.table(pc2w,file="./results/auto/alg_table_worm.txt",quote=FALSE)
+write.table(pc2w,file="./results/alg_table_worm.txt",quote=FALSE)
 
 pc2y<-alg_ranking(subset(auc,species=="yeast"))  
-write.table(pc2y,file="./results/auto/alg_table_yeast.txt",quote=FALSE)
+write.table(pc2y,file="./results/alg_table_yeast.txt",quote=FALSE)
 
 print(pc2); print(pc2w); print(pc2y)
 
@@ -95,8 +95,8 @@ auc$algorithms<-factor(auc$algorithms,levels=rev(rownames(pc2)),ordered=TRUE)
 turn pairwise table into a plot
 
 ```{r}
-pc2<-as.matrix(read.table("./results/auto/alg_table.txt",header=TRUE))
-pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE,filename="./results/auto/plots/alg_table_heatmap.pdf")
+pc2<-as.matrix(read.table("./results/alg_table.txt",header=TRUE))
+pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE,filename="./results/plots/alg_table_heatmap.pdf")
 ```
 
 what is the best combination of features and algorithm within each species?

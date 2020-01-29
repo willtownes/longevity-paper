@@ -15,7 +15,7 @@ library(GO.db)
 #library(biomaRt)
 source("./util.R") #loads dplyr and Matrix
 fp<-file.path
-bp<-"./results/auto"
+bp<-"./results"
 pp<-fp(bp,"plots")
 if(!dir.exists(pp)){
   dir.create(pp,recursive=TRUE)
@@ -129,9 +129,9 @@ for(sp in species){
 For worm, the optimal alpha was .05 (mostly ridge regression). For yeast, the optimal alpha was 0.5 (even mix between ridge and lasso).
 
 ```{r}
-worm<-read.table("./results/auto/final_preds_go_gxp_worm.txt",header=TRUE)
+worm<-read.table("./results/final_preds_go_gxp_worm.txt",header=TRUE)
 worm$species<-"worm"
-yeast<-read.table("./results/auto/final_preds_go_gxp_yeast.txt",header=TRUE)
+yeast<-read.table("./results/final_preds_go_gxp_yeast.txt",header=TRUE)
 yeast$species<-"yeast"
 pd<-rbind(worm,yeast)
 pd$ga<-"non-genage"
