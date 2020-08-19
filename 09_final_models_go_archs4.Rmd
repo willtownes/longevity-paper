@@ -121,7 +121,7 @@ for(sp in species){
     res
   }
   preds<-rbind(g(fit,"train"),g(fit,"test"))
-  ofile<-fp(bp,paste0("final_preds_go_gxp_",sp,".txt"))
+  ofile<-fp(bp,paste0("final_preds_go_archs4_",sp,".txt"))
   write.table(preds,file=ofile,quote=FALSE,row.names=FALSE)
 }
 ```
@@ -129,9 +129,9 @@ for(sp in species){
 For worm, the optimal alpha was .05 (mostly ridge regression). For yeast, the optimal alpha was 0.5 (even mix between ridge and lasso).
 
 ```{r}
-worm<-read.table("./results/final_preds_go_gxp_worm.txt",header=TRUE)
+worm<-read.table("./results/final_preds_go_archs4_worm.txt",header=TRUE)
 worm$species<-"worm"
-yeast<-read.table("./results/final_preds_go_gxp_yeast.txt",header=TRUE)
+yeast<-read.table("./results/final_preds_go_archs4_yeast.txt",header=TRUE)
 yeast$species<-"yeast"
 pd<-rbind(worm,yeast)
 pd$ga<-"non-genage"

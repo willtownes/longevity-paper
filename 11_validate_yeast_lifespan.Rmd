@@ -1,5 +1,5 @@
 ---
-title: "Validate the GO+GXP model predictions on yeast lifespan data"
+title: "Validate the GO+ARCHS4 model predictions on yeast lifespan data"
 author: "Will Townes"
 date: "11/14/2018"
 output: html_document
@@ -7,7 +7,7 @@ output: html_document
 
 # Introduction
 
-To validate our results, we obtained two auxiliary data sources for yeast: replicative lifespan from McCormick et al 2015 and chronological lifespan from Marek and Korona (2013). We examine whether genes predicted as associated with pro or anti longevity by the GO terms+gene expression model end up having longer/shorter lifespans in these alternative datasets where the different yeast strains had those genes deleted.
+To validate our results, we obtained two auxiliary data sources for yeast: replicative lifespan from McCormick et al 2015 and chronological lifespan from Marek and Korona (2013). We examine whether genes predicted as associated with pro or anti longevity by the GO terms+ARCHS4 gene expression model end up having longer/shorter lifespans in these alternative datasets where the different yeast strains had those genes deleted.
 
 ```{r}
 library(ggplot2)
@@ -28,7 +28,7 @@ Comparing model prediction of pro-longevity vs observed change in RLS for McCorm
 Compare pro-longevity probability with replicative lifespan from McCormick (yeast only)
 
 ```{r}
-pd<-read.table("./results/final_preds_go_gxp_yeast.txt",header=TRUE)
+pd<-read.table("./results/final_preds_go_archs4_yeast.txt",header=TRUE)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 sv<-read.csv("data/mccormick_all.csv",stringsAsFactors=FALSE)
@@ -103,7 +103,7 @@ ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
 ## Marek & Korona 2013
 
 ```{r}
-pd<-read.table("./results/final_preds_go_gxp_yeast.txt",header=TRUE)
+pd<-read.table("./results/final_preds_go_archs4_yeast.txt",header=TRUE)
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 sv<-read.table("data/marek_korona_deletion_cleaned.txt",header=TRUE,stringsAsFactors=FALSE)
