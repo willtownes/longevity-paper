@@ -1,0 +1,46 @@
+---
+title: "Responding to Reviewer Comments"
+author: "Will Townes"
+date: "8/19/2020"
+output: html_document
+---
+
+```{r}
+library(tidyverse); theme_set(theme_bw())
+```
+
+## Reviewer 1
+
+### Comment 3
+
+Could the authors provide a visual representation of the overlap (or lack thereof) between predicted pro- and anti-longevity genes predicted from GO only vs. GO+ARCHS2 (mentioned to differ quite a lot in manuscript p4). This would be best done by maybe comparing ranks as a scatterplot, or a Venn diagram with more than 10 genes on each side. This would give an idea of how both types of models perform and predict.
+
+```{r}
+#GO+ARCHS4 features
+worm<-read.table("./results/final_preds_go_archs4_worm.txt",header=TRUE)
+worm$species<-"worm"
+yeast<-read.table("./results/final_preds_go_archs4_yeast.txt",header=TRUE)
+yeast$species<-"yeast"
+pd<-rbind(worm,yeast)
+colnames(pd)[colnames(pd)=="prob_pro_longevity"]<-"go_archs4_prob"
+#GO only features
+worm<-read.table("./results/final_preds_go_only_worm.txt",header=TRUE)
+worm$species<-"worm"
+yeast<-read.table("./results/final_preds_go_only_yeast.txt",header=TRUE)
+yeast$species<-"yeast"
+pd2<-rbind(worm,yeast)
+colnames(pd2)[colnames(pd2)=="prob_pro_longevity"]<-"go_only_prob"
+pd<-merge(pd,pd2,by=c("species","gene","genage_annotated"))
+pd$ga<-"non-genage"
+pd$ga[pd$genage_annotated]<-"genage"
+ggplot(pd,aes(x=go_archs4_prob,y=go_only_prob))+geom_point()+facet_grid(ga~species)
+ggsave("./results/plots/probs_compare_go_archs4_vs_go_only.pdf",width=5,height=5)
+
+#same plot but using ranks- too noisy
+scaled_rank<-function(x){rank(x,na.last="keep")/length(x)}
+pd2<-pd %>% group_by(species) %>%
+  mutate(go_archs4_rk=scaled_rank(go_archs4_prob),
+         go_only_rk=scaled_rank(go_only_prob))
+ggplot(pd2,aes(x=go_archs4_rk,y=go_only_rk))+geom_point()+facet_grid(ga~species)
+ggsave("./results/plots/probs_compare_go_archs4_vs_go_only_ranks.pdf",width=5,height=5)
+```
