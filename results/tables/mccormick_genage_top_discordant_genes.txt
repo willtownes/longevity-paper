@@ -1,0 +1,11 @@
+gene genage_category lifespan_change
+NDT80 pro-longevity 7.53898305084746
+BMH2 pro-longevity 4.98260869565217
+MDH2 pro-longevity 4.54117647058823
+LAG2 pro-longevity 2.88888888888889
+ZDS2 pro-longevity 2.17777777777778
+ATP1 anti-longevity -17.7876229597328
+ADH1 anti-longevity -13.4981454327658
+PDX3 anti-longevity -12.8
+KAR3 anti-longevity -11.3578947368421
+RAD55 anti-longevity -11.1566096271186

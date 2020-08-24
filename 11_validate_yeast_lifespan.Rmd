@@ -10,8 +10,7 @@ output: html_document
 To validate our results, we obtained two auxiliary data sources for yeast: replicative lifespan from McCormick et al 2015 and chronological lifespan from Marek and Korona (2013). We examine whether genes predicted as associated with pro or anti longevity by the GO terms+ARCHS4 gene expression model end up having longer/shorter lifespans in these alternative datasets where the different yeast strains had those genes deleted.
 
 ```{r}
-library(ggplot2)
-theme_set(theme_bw())
+library(ggplot2); theme_set(theme_bw())
 source("./util.R") #loads dplyr and Matrix
 fp<-file.path
 bp<-"./results"
@@ -98,6 +97,16 @@ pd4<-subset(pd2,ga=="genage")
 #colnames(pd4)[colnames(pd4)=="prob_pro_longevity"]<-"prob"
 ggplot(pd4,aes(x=genage_category,y=lifespan_change))+geom_boxplot()+geom_jitter(width=.1,alpha=.5)+ylab("change in replicative lifespan after knockout")+xlab("genage annotation")+geom_hline(yintercept=0,linetype="dotted")
 ggsave(fp(pp,"mccormick_vs_genage.pdf"),width=4,height=4)
+```
+
+export list of top 5 most discordant genes to check on GenAge manually if they are replicative or chronological lifespan.
+
+```{r}
+top_discord_anti<-pd4 %>% subset(genage_category=="anti-longevity") %>% arrange(lifespan_change) %>% head(5)
+top_discord_pro<-pd4 %>% subset(genage_category=="pro-longevity") %>% arrange(desc(lifespan_change)) %>% head(5)
+top_discord<-rbind(top_discord_pro,top_discord_anti)
+top_discord<-top_discord[,c("gene","genage_category","lifespan_change")]
+write.table(top_discord,file=fp(bp,"tables/mccormick_genage_top_discordant_genes.txt"),row.names=FALSE,quote=FALSE)
 ```
 
 ## Marek & Korona 2013
