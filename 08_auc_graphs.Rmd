@@ -96,7 +96,12 @@ turn pairwise table into a plot
 
 ```{r}
 pc2<-as.matrix(read.table("./results/alg_table.txt",header=TRUE))
-pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE,filename="./results/plots/alg_table_heatmap.pdf")
+pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE,filename=fp(pth,"alg_table_heatmap.pdf"))
+#EPS save for manuscript, have to do manual since pheatmap doesn't support
+#setEPS()
+#postscript(fp(pth,"fig1.eps"),width=5,height=4.5)
+pheatmap(pc2,display_numbers = TRUE,cluster_rows=FALSE,cluster_cols=FALSE,color = colorRampPalette(c('white','orange'))(100),fontsize = 20,angle_col=0,legend=FALSE)
+#dev.off()
 ```
 
 what is the best combination of features and algorithm within each species?
