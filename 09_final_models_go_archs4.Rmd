@@ -138,6 +138,7 @@ pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
 ggplot(pd,aes(x=prob_pro_longevity))+geom_histogram(color="black",fill="white")+facet_grid(ga~species,scales="free_y")+theme_bw()+xlab("predicted probability gene is pro-longevity")+expand_limits(x=c(0,1))
 ggsave(fp(pp,"final_preds_hist.pdf"),width=5,height=5)
+ggsave(fp(pp,"figS4.eps"),width=5,height=5,dpi=300,device="eps")
 ```
 
 extract out the top ten pro and anti-longevity genes that were not in genage

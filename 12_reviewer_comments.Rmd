@@ -33,8 +33,9 @@ colnames(pd2)[colnames(pd2)=="prob_pro_longevity"]<-"go_only_prob"
 pd<-merge(pd,pd2,by=c("species","gene","genage_annotated"))
 pd$ga<-"non-genage"
 pd$ga[pd$genage_annotated]<-"genage"
-ggplot(pd,aes(x=go_archs4_prob,y=go_only_prob))+geom_point(size=.4,alpha=.5)+facet_grid(ga~species)
+ggplot(pd,aes(x=go_archs4_prob,y=go_only_prob))+geom_point(size=.4)+facet_grid(ga~species)
 ggsave("./results/plots/probs_compare_go_archs4_vs_go_only.png",width=5,height=5)
+ggsave("./results/plots/figS3.eps",width=5,height=5,device="eps",dpi=300)
 
 #same plot but using ranks- too noisy
 scaled_rank<-function(x){rank(x,na.last="keep")/length(x)}

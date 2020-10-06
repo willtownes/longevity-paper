@@ -42,8 +42,9 @@ pd2$gacat[pd2$gacat==1]<-"pro-longevity"
 pd2$gacat<-factor(pd2$gacat)
 colnames(pd2)[colnames(pd2)=="gacat"]<-"genage_category"
 
-ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change,colour=genage_category)) +geom_point(alpha=.9) +xlab("predicted probability gene is pro-longevity") +ylab("change in replicative lifespan after knockout") +geom_smooth(color="black",size=.5,se=FALSE) +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
+ggplot(pd2,aes(x=prob_pro_longevity,y=lifespan_change,colour=genage_category)) +geom_point() +xlab("predicted probability gene is pro-longevity") +ylab("change in replicative lifespan after knockout") +geom_smooth(color="black",size=.5,se=FALSE,method="loess") +facet_wrap(~ga) +scale_colour_manual(values=c("red","blue","gray"))
 ggsave(fp(pp,"probs_vs_rls.pdf"),width=7,height=4)
+ggsave(fp(pp,"fig4.eps"),width=5.2,height=3.2,dpi=300,device="eps")
 
 #same plot but focus only on top 20 and bottom 20 genes
 f<-function(d,G=20){

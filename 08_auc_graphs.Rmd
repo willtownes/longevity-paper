@@ -17,8 +17,8 @@ pth<-fp(bp,"plots")
 if(!dir.exists(pth)){
   dir.create(pth,recursive=TRUE)
 }
-ggs<-function(plt,w=6,h=4){
-  if(sp){ ggsave(file=fp(pth,plt),width=w,height=h) }
+ggs<-function(plt,w=6,h=4,...){
+  if(sp){ ggsave(file=fp(pth,plt),width=w,height=h,...) }
 }
 ```
 
@@ -53,6 +53,7 @@ auc0$alg<-plyr::mapvalues(auc0$alg,from=c("glmnet","svmRadialSigma","xgbTree","n
 colnames(auc0)[colnames(auc0)=="alg"]<-"algorithms"
 auc<-subset(auc0,fold=="test")
 auc$features<-factor(auc$features,levels=c("archs4","gxp","go","go_archs4","go_gxp"),ordered=TRUE)
+auc$algorithms<-factor(auc$algorithms)
 ```
 
 pairwise comparison of all algorithms. Focusing only on test set AUC, for each combination of species, features set, and cross validation fold, rank the algorithms according to their AUC. Then, for each pairwise comparison of algorithms, compute the fraction of folds where one algorithm was superior to the other. Order the algorithms by the minimum of these proportions. The idea is that a consistently good algorithm is better than all other algorithms uniformly.
@@ -63,7 +64,7 @@ alg_ranking<-function(auc){
   #creates a table with pairwise comparison of which algorithms
   #had better performance across experimental conditions
   algs<-levels(auc$algorithms)
-  pc<-spread(auc,algorithms,auc)
+  pc<-pivot_wider(auc,names_from="algorithms",values_from="auc")
   rk<-t(apply(pc[,algs],1,rank))
   pc2<-matrix(0,nrow=length(algs),ncol=length(algs))
   rownames(pc2)<-colnames(pc2)<-algs
@@ -133,6 +134,7 @@ roc_y$species<-"yeast"
 roc<-rbind(roc_w,roc_y)
 ggplot(roc,aes(x=fpr,y=tpr,group=cv_fold))+geom_segment(x=0,y=0,xend=1,yend=1,linetype="dotted",colour="gray",size=.5)+geom_line()+xlab("false positive rate")+ylab("true positive rate")+facet_wrap(~species)
 ggs("roc_best.pdf")
+ggs("fig3.eps",w=5.2,h=3.5,dpi=300,device="eps")
 ```
 
 overall summary of all results
@@ -141,12 +143,16 @@ overall summary of all results
 cbb<-c("#E69F00","#56B4E9","#009E73","#0072B2","#D55E00","#CC79A7","#F0E442","#000000")
 ggplot(auc,aes(x=algorithms,y=auc,fill=features,colour=features))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb)+scale_colour_manual(values=cbb)+ylab("area under ROC")#+theme(axis.text.x=element_text(angle = 30, hjust = 1))
 ggs("auc_all_xalg.pdf")
+ggs("figS1.eps",w=5.2,h=3.5,dpi=300,device="eps")
+
 ggplot(auc,aes(x=features,y=auc,fill=algorithms,colour=algorithms))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb)+scale_colour_manual(values=cbb)+ylab("area under ROC")+theme(axis.text.x=element_text(angle = 30, hjust = 1))
 ggs("auc_all_xfeat.pdf")
+ggs("figS2.eps",w=5.2,h=3.5,dpi=300,device="eps")
 
 #subset on best performing algorithms only
 auc2<-subset(auc,algorithms %in% c("svm","pglm"))
 auc2$algorithms<-factor(auc2$algorithms,levels=c("pglm","svm"))
 ggplot(auc2,aes(x=features,y=auc,fill=algorithms,colour=algorithms))+geom_boxplot()+facet_wrap(~species)+scale_fill_manual(values=cbb[5:4])+scale_colour_manual(values=cbb[5:4])+ylab("area under ROC")+theme(axis.text.x=element_text(angle = 30, hjust = 1),legend.position="top")
 ggs("auc_svm_pglm.pdf")
+ggs("fig2.eps",w=5.2,h=3.5,dpi=300,device="eps")
 ```
