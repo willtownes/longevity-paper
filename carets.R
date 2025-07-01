@@ -3,32 +3,56 @@ library(caret)
 library(ROCR)
 
 #generic function for fitting models with caret
-fitcaret<-function(Xtrn,ytrn,mth=c("kknn","xgbTree","svmRadialSigma","glmnet","naive_bayes"),trc=trainControl("repeatedcv",10,repeats=2)){
-  mth<-match.arg(mth)
-  args<-list(Xtrn,ytrn,preProcess="zv",metric="Kappa",trControl=trc,method=mth)
-  if(mth=="svmRadialSigma"){ args$prob.model<-TRUE }
-  if(mth=="glmnet"){ args$family<-"binomial" }
-  if(mth=="naive_bayes"){
-    args$preProcess<-"nzv"
-    tg=expand.grid(laplace=0,usekernel=TRUE,adjust=c(0.5,1.0))
-    args$tuneGrid<-tg
+fitcaret <- function(
+  Xtrn,
+  ytrn,
+  mth = c("kknn", "xgbTree", "svmRadialSigma", "glmnet", "naive_bayes"),
+  trc = trainControl("repeatedcv", 10, repeats = 2)
+) {
+  mth <- match.arg(mth)
+  args <- list(
+    Xtrn,
+    ytrn,
+    preProcess = "zv",
+    metric = "Kappa",
+    trControl = trc,
+    method = mth
+  )
+  if (mth == "svmRadialSigma") {
+    args$prob.model <- TRUE
   }
-  do.call(train,args)
+  if (mth == "glmnet") {
+    args$family <- "binomial"
+  }
+  if (mth == "naive_bayes") {
+    args$preProcess <- "nzv"
+    tg = expand.grid(laplace = 0, usekernel = TRUE, adjust = c(0.5, 1.0))
+    args$tuneGrid <- tg
+  }
+  do.call(train, args)
 }
 
 #for any caret model, extract the true and false positive rates that can be used to make ROC
-caret_roc<-function(fit,Xtst,ytst,ytrn){
-  p1<-prediction(predict(fit,type="prob")[,2], ytrn)
-  p2<-prediction(predict(fit,Xtst,type="prob")[,2], ytst)
-  p1<-performance(p1,"tpr","fpr")
-  p2<-performance(p2,"tpr","fpr")
-  d1<-data.frame(tpr=p1@y.values[[1]],fpr=p1@x.values[[1]],fold="train")
-  d2<-data.frame(tpr=p2@y.values[[1]],fpr=p2@x.values[[1]],fold="test")
-  rbind(d1,d2)
+caret_roc <- function(fit, Xtst, ytst, ytrn) {
+  p1 <- prediction(predict(fit, type = "prob")[, 2], ytrn)
+  p2 <- prediction(predict(fit, Xtst, type = "prob")[, 2], ytst)
+  p1 <- performance(p1, "tpr", "fpr")
+  p2 <- performance(p2, "tpr", "fpr")
+  d1 <- data.frame(
+    tpr = p1@y.values[[1]],
+    fpr = p1@x.values[[1]],
+    fold = "train"
+  )
+  d2 <- data.frame(
+    tpr = p2@y.values[[1]],
+    fpr = p2@x.values[[1]],
+    fold = "test"
+  )
+  rbind(d1, d2)
 }
 
-roc2auc<-function(fpr,tpr){ 
+roc2auc <- function(fpr, tpr) {
   #trapezoid rule for area under the curve
-  m<-(tpr[-1]+tpr[-length(tpr)])/2
-  sum(m*diff(fpr)) 
+  m <- (tpr[-1] + tpr[-length(tpr)]) / 2
+  sum(m * diff(fpr))
 }
